@@ -1,8 +1,55 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { getDb } from "@/lib/admin/db";
-export interface MediaAsset{id:string;src:string;filename:string;mime:string;width:number;height:number;size:number;alt:string;credit:string;state:"ready"|"processing"|"failed";archived:boolean;createdAt:string;}
-const map=(row:Record<string,unknown>):MediaAsset=>({id:String(row.id),src:String(row.src),filename:String(row.filename),mime:String(row.mime),width:Number(row.width),height:Number(row.height),size:Number(row.size),alt:String(row.alt),credit:String(row.credit),state:row.state as MediaAsset["state"],archived:Boolean(row.archived),createdAt:String(row.created_at)});
-export async function listMedia(){const db=await getDb();return (db.prepare("SELECT * FROM media ORDER BY created_at DESC").all() as Record<string,unknown>[]).map(map);}
-export async function archiveMedia(id:string){const db=await getDb();db.prepare("UPDATE media SET archived=1 WHERE id=?").run(id);return listMedia();}
-export async function saveUpload(file:File,bytes:Uint8Array,width:number,height:number,alt:string,credit:string){const db=await getDb();const extension=file.name.split(".").pop()?.toLowerCase()??"jpg";const id=`upload-${crypto.randomUUID()}`;const filename=`${id}.${extension}`;const relative=`/media/uploads/${filename}`;const target=path.join(process.cwd(),"public",relative);await mkdir(path.dirname(target),{recursive:true});await writeFile(target,bytes);db.prepare("INSERT INTO media (id,src,filename,mime,width,height,size,alt,credit,state,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(id,relative,file.name,file.type,width,height,file.size,alt,credit,"ready",new Date().toISOString());return (await listMedia()).find(item=>item.id===id);}
+import { getDb } from "@/lib/admin/mongo";
+import { destroyImage, uploadImage } from "@/lib/admin/cloudinary";
+
+export interface MediaAsset{id:string;publicId:string;src:string;filename:string;mime:string;width:number;height:number;size:number;alt:string;credit:string;state:"ready"|"processing"|"failed";archived:boolean;createdAt:string;}
+
+type MediaDoc = Omit<MediaAsset, "id"> & { _id: string };
+
+const map = ({ _id, ...rest }: MediaDoc): MediaAsset => ({ id: _id, ...rest });
+
+async function collection() {
+  return (await getDb()).collection<MediaDoc>("media");
+}
+
+export async function listMedia(): Promise<MediaAsset[]> {
+  return (await (await collection()).find().sort({ createdAt: -1 }).toArray()).map(map);
+}
+
+/** Soft delete: the asset stays in Cloudinary so it can be restored. */
+export async function archiveMedia(id: string) {
+  await (await collection()).updateOne({ _id: id }, { $set: { archived: true } });
+  return listMedia();
+}
+
+/** Hard delete: removes the asset from Cloudinary too, freeing storage credits. */
+export async function deleteMedia(id: string) {
+  const col = await collection();
+  const doc = await col.findOne({ _id: id });
+  if (doc?.publicId) await destroyImage(doc.publicId);
+  await col.deleteOne({ _id: id });
+  return listMedia();
+}
+
+/**
+ * Uploads to Cloudinary and records it in Mongo in the one request, so the
+ * image is live on the public site immediately — no rebuild, which is the
+ * defect this replaces (files written to public/ are only served if they
+ * existed when `next build` ran).
+ */
+export async function saveUpload(file: File, bytes: Uint8Array, alt: string, credit: string) {
+  const uploaded = await uploadImage(bytes);
+  const id = `upload-${crypto.randomUUID()}`;
+  try {
+    await (await collection()).insertOne({
+      _id: id, publicId: uploaded.publicId, src: uploaded.src, filename: file.name,
+      mime: file.type, width: uploaded.width, height: uploaded.height, size: uploaded.bytes,
+      alt, credit, state: "ready", archived: false, createdAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    // Roll the upload back, or a failed insert would strand a paid-for asset
+    // in Cloudinary that nothing references.
+    await destroyImage(uploaded.publicId).catch(() => {});
+    throw error;
+  }
+  return (await listMedia()).find((item) => item.id === id);
+}
