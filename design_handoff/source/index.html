@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>R.A. Design Studio — Architecture, Interiors, Planning</title>
+<meta name="description" content="R.A. Design Studio — an architecture, interiors and planning practice based in Ahmedabad. Quiet, material-led work for residential, commercial and hospitality clients."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet"/>
+<link rel="icon" type="image/png" href="assets/logo-ra.png"/>
+<link rel="stylesheet" href="assets/site.css?v=24"/>
+<script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+</head>
+<body>
+<script>window.__page = { active: "home" };</script>
+<div id="nav-slot"></div>
+
+<main class="page">
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-media">
+      <div class="ph basalt" id="hero-ph"></div>
+    </div>
+    <div class="hero-text">
+      <h1 class="reveal in">
+        Quiet architecture.<br/>
+        <em>Measured</em> in light.
+      </h1>
+      <div class="hero-meta reveal in">
+        <div><span class="k">Est.</span><span class="v">1994</span></div>
+        <div><span class="k">Built</span><span class="v">48 projects</span></div>
+        <div><span class="k">Based</span><span class="v">Ahmedabad</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURED WORK -->
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <h2>Selected work, 2021 — 2026</h2>
+        <div><span class="num">06 / 20 featured</span> &nbsp; <a href="work.html" class="text-red" style="font-size:13px; border-bottom:1px solid var(--red); padding-bottom:2px;">View all →</a></div>
+      </div>
+      <div class="masonry" id="featured"></div>
+    </div>
+  </section>
+
+  <!-- BIG FEATURED PROJECT -->
+  <section class="section tight" style="background: var(--paper-2); padding: 100px 0;">
+    <div class="container">
+      <div class="home-split">
+        <div class="big-img img-mask reveal">
+          <div class="ph concrete" style="height:100%;"></div>
+        </div>
+        <div class="info reveal">
+          <span class="pill"><span class="d"></span> In progress · Bengaluru</span>
+          <h3 style="margin-top:24px;">Folio Tower</h3>
+          <p class="lede">A seventeen-storey tower folded like a book — each floor indexed by a deep private loggia that meets the sky differently.</p>
+          <div style="margin-top: 32px;">
+            <a href="project.html?p=folio-tower" class="btn-red">Enter project <span>→</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================  LUXURY HOOK SECTIONS  ==================== -->
+
+  <!-- SERVICES -->
+  <section class="section-luxe">
+    <div class="container">
+      <div class="eyebrow reveal">For builders, developers &amp; private clients</div>
+      <div style="display:grid; grid-template-columns: 1.4fr 1fr; gap: 60px; align-items: end;">
+        <h2 class="h-luxe reveal">
+          A practice built for the full <em>arc</em> of a project — from brief to handover.
+        </h2>
+        <p class="lede reveal" style="max-width: 40ch;">
+          We work in six disciplines, under one studio, with one partner accountable per project. No outsourcing, no white-labelling, no surprises.
+        </p>
+      </div>
+      <div class="services-grid stagger" id="services"></div>
+    </div>
+  </section>
+
+  <!-- HOW WE WORK (DARK) -->
+  <section class="section-luxe dark">
+    <div class="container">
+      <div class="eyebrow reveal">How we work</div>
+      <div style="display:grid; grid-template-columns: 1.4fr 1fr; gap: 60px; align-items: end;">
+        <h2 class="h-luxe reveal">A <em>four-step</em> rhythm — disciplined, transparent, on schedule.</h2>
+        <p class="lede reveal" style="max-width: 40ch; color: rgba(255,255,255,.65);">
+          Designed so a builder, a developer or a private client always knows what's next, what's due, and what's defendable.
+        </p>
+      </div>
+      <div class="process-grid stagger" id="process"></div>
+
+      <!-- Stats -->
+      <div class="stats-inline reveal">
+        <div class="s"><div class="n">32<span class="sup">yrs</span></div><div class="k">In practice</div></div>
+        <div class="s"><div class="n">48</div><div class="k">Built projects</div></div>
+        <div class="s"><div class="n">11</div><div class="k">International awards</div></div>
+        <div class="s"><div class="n">₹1,200<span class="sup">cr</span></div><div class="k">Delivered value</div></div>
+      </div>
+
+      <!-- Testimonial (same dark canvas) -->
+      <div class="testimonial-wrap">
+        <div class="eyebrow reveal" style="color: var(--red);">What our clients say</div>
+        <div class="testimonial-block">
+          <div class="mark reveal">"</div>
+          <div>
+            <p class="body reveal" id="t-body"></p>
+            <div class="by reveal" id="t-by"></div>
+            <div class="testi-nav">
+              <button id="t-prev" aria-label="Previous">←</button>
+              <button id="t-next" aria-label="Next">→</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRESS LOGOS -->
+  <section class="section-luxe bone">
+    <div class="container">
+      <div class="eyebrow reveal">Press &amp; recognition</div>
+      <div style="display:flex; justify-content: space-between; align-items: baseline; gap: 24px; flex-wrap: wrap; margin-bottom: 50px;">
+        <h2 class="h-luxe reveal">As featured <em>in</em>.</h2>
+        <a href="press.html" style="font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--red); border-bottom: 1px solid var(--red); padding-bottom: 2px;">All coverage →</a>
+      </div>
+      <div class="press-logos reveal" id="press-logos"></div>
+    </div>
+  </section>
+
+  <!-- QUIET STUDIO LINE & CTA -->
+  <section class="section">
+    <div class="container">
+      <div style="display:grid; grid-template-columns: 1fr 1.8fr; gap: 80px; align-items: start;">
+        <div class="label reveal">— The studio</div>
+        <div class="reveal">
+          <h2 class="h1" style="max-width: 22ch;">
+            We design in stone, lime, teak and <em  class="text-red em-serif">shadow</em> — for clients who value restraint.
+          </h2>
+          <div style="margin-top:48px; display:flex; gap: 14px; flex-wrap: wrap;">
+            <a href="studio.html" class="btn-link">About the studio <span class="arr">→</span></a>
+            <a href="contact.html" class="btn-red">Start a project <span class="arr">→</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="footer-slot"></div>
+
+<div id="tweaks">
+  <h4>Tweaks</h4>
+  <div class="g-label">Hero material</div>
+  <span class="opt active" data-tweak="hero" data-val="basalt">Basalt</span>
+  <span class="opt" data-tweak="hero" data-val="concrete">Concrete</span>
+  <span class="opt" data-tweak="hero" data-val="teak">Teak</span>
+  <span class="opt" data-tweak="hero" data-val="shadow">Shadow</span>
+  <div class="g-label">Accent</div>
+  <span class="opt active" data-tweak="accent" data-val="#c8102e">Deep red</span>
+  <span class="opt" data-tweak="accent" data-val="#e63946">Bright red</span>
+  <span class="opt" data-tweak="accent" data-val="#8b0000">Oxblood</span>
+  <span class="opt" data-tweak="accent" data-val="#b31b1b">Cardinal</span>
+</div>
+
+<script>
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "hero": "basalt",
+  "accent": "#c8102e"
+}/*EDITMODE-END*/;
+let tweaks = Object.assign({}, TWEAK_DEFAULTS, JSON.parse(localStorage.getItem("ra-tweaks") || "{}"));
+function applyTweaks(){
+  const heroPh = document.getElementById("hero-ph");
+  if (heroPh) { heroPh.className = `ph ${tweaks.hero}`; heroPh.removeAttribute("data-hydrated"); }
+  document.documentElement.style.setProperty("--red", tweaks.accent);
+  document.documentElement.style.setProperty("--red-2", tweaks.accent);
+  document.querySelectorAll("#tweaks .opt").forEach(o => {
+    o.classList.toggle("active", tweaks[o.dataset.tweak] === o.dataset.val);
+  });
+  localStorage.setItem("ra-tweaks", JSON.stringify(tweaks));
+}
+function setTweak(k,v){ tweaks[k]=v; try{window.parent.postMessage({type:'__edit_mode_set_keys',edits:{[k]:v}},'*');}catch(e){} applyTweaks(); if (window.RA) window.RA.hydratePh(); }
+document.querySelectorAll("#tweaks .opt").forEach(o => o.addEventListener("click", () => setTweak(o.dataset.tweak, o.dataset.val)));
+window.addEventListener("message", (e) => {
+  const d = e.data; if (!d || !d.type) return;
+  if (d.type === "__activate_edit_mode") document.getElementById("tweaks").classList.add("open");
+  if (d.type === "__deactivate_edit_mode") document.getElementById("tweaks").classList.remove("open");
+});
+window.parent.postMessage({type: "__edit_mode_available"}, "*");
+</script>
+
+<script src="assets/data.js?v=24"></script>
+<script src="assets/partials.js?v=24"></script>
+<script src="assets/site.js?v=24"></script>
+<script>
+(function(){
+  // Featured masonry
+  const feats = ["oasis","vs-house","folio-tower","the-quiet-clinic","house-of-eight","stone-stepwell"];
+  const items = feats.map(s => window.RA_PROJECTS.find(p => p.slug === s)).filter(Boolean);
+  const ratios = ["4/5","3/4","4/3","3/4","4/5","3/4"];
+  document.getElementById("featured").innerHTML = items.map((p,i) => `
+    <a href="project.html?p=${p.slug}" class="reveal">
+      <div class="img-wrap img-mask" style="aspect-ratio: ${ratios[i]};">
+        <div class="ph ${p.swatch}"></div>
+      </div>
+      <div class="meta">
+        <div>
+          <div class="ttl">${p.title}</div>
+          <div class="sub">${p.location} · ${p.type.split(" / ")[0]}</div>
+        </div>
+        <div class="yr">${p.year}</div>
+      </div>
+    </a>`).join("");
+
+  // Services
+  document.getElementById("services").innerHTML = window.RA_SERVICES.map(s => `
+    <div class="srv reveal">
+      <div class="n">${s.n}</div>
+      <div class="t">${s.t} <span class="count">${s.projects} built</span></div>
+      <div class="d">${s.d}</div>
+    </div>`).join("");
+
+  // Process
+  document.getElementById("process").innerHTML = window.RA_PROCESS.map(s => `
+    <div class="step reveal">
+      <div class="n">STEP ${s.n}</div>
+      <div class="t">${s.t}</div>
+      <div class="d">${s.d}</div>
+    </div>`).join("");
+
+  // Press logos
+  document.getElementById("press-logos").innerHTML = window.RA_PRESS_LOGOS.map(name => `
+    <div class="lg">${name}</div>`).join("");
+
+  // Testimonial carousel
+  const ts = window.RA_TESTIMONIALS;
+  let ti = 0;
+  const tBody = document.getElementById("t-body");
+  const tBy = document.getElementById("t-by");
+  function setT() {
+    tBody.style.opacity = 0;
+    tBy.style.opacity = 0;
+    setTimeout(() => {
+      tBody.textContent = ts[ti].quote;
+      tBy.innerHTML = `<span class="nm">${ts[ti].name}</span> ${ts[ti].role}`;
+      tBody.style.opacity = 1;
+      tBy.style.opacity = 1;
+    }, 250);
+  }
+  tBody.style.transition = "opacity .5s ease";
+  tBy.style.transition = "opacity .5s ease";
+  setT();
+  document.getElementById("t-prev").addEventListener("click", () => { ti = (ti - 1 + ts.length) % ts.length; setT(); });
+  document.getElementById("t-next").addEventListener("click", () => { ti = (ti + 1) % ts.length; setT(); });
+  // auto-rotate
+  setInterval(() => { ti = (ti + 1) % ts.length; setT(); }, 8000);
+
+  setTimeout(() => { applyTweaks(); if (window.RA) { window.RA.hydratePh(); window.RA.triggerReveals(); } }, 0);
+})();
+</script>
+</body>
+</html>

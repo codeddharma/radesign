@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Studio — R.A. Design Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet"/>
+<link rel="icon" type="image/png" href="assets/logo-ra.png"/>
+<link rel="stylesheet" href="assets/site.css?v=24"/>
+<script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+<style>
+  .about-intro { max-width: 880px; margin: 0 auto; padding: 140px var(--page-pad) 56px; }
+  .about-intro p { font-size: 16px; line-height: 1.75; color: var(--ink-2); margin-bottom: 20px; letter-spacing: -0.005em; }
+  .about-intro p .brand { color: var(--red); font-weight: 600; }
+  .about-intro .divider { margin-top: 48px; }
+
+  .founders {
+    max-width: 1040px; margin: 0 auto; padding: 48px var(--page-pad) 16px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 64px;
+  }
+  .founder .portrait { aspect-ratio: 4/5; background: var(--line-2); margin-bottom: 18px; filter: grayscale(1); }
+  .founder .portrait .ph { height: 100%; }
+  .founder .nm {
+    font-size: 22px; font-weight: 500; text-align: center; margin-bottom: 4px;
+    letter-spacing: -0.01em;
+  }
+  .founder .nm .init {
+    color: var(--red); font-family: var(--serif); font-style: italic; font-weight: 400;
+  }
+  .founder .bio {
+    font-size: 13.5px; line-height: 1.7; color: var(--ink-2); margin-top: 20px;
+    max-width: 44ch; margin-left:auto; margin-right:auto; text-align: left;
+  }
+
+  .team-head {
+    text-align: center; padding: 100px var(--page-pad) 40px;
+    border-top: 1px solid var(--line); max-width: 1200px; margin: 80px auto 0;
+  }
+  .team-head h2 {
+    font-size: clamp(28px, 3vw, 40px); font-weight: 500; letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+
+  .team-grid-lg {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 36px 28px;
+    max-width: 1200px; margin: 0 auto; padding: 20px var(--page-pad) 120px;
+  }
+  .team-grid-lg .p .img { aspect-ratio: 1/1; background: var(--line-2); margin-bottom: 14px; filter: grayscale(1); }
+  .team-grid-lg .p .img .ph { height: 100%; }
+  .team-grid-lg .p .name {
+    font-size: 13px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+  }
+  .team-grid-lg .p .role { font-size: 12px; color: var(--mute); margin-top: 2px; }
+
+  @media (max-width: 860px) {
+    .founders { grid-template-columns: 1fr; gap: 40px; }
+    .team-grid-lg { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<script>window.__page = { active: "studio" };</script>
+<div id="nav-slot"></div>
+
+<main class="page">
+  <section class="about-intro">
+    <p class="reveal in"><span class="brand">RA Design Studio</span> is an architecture firm set up by Ar. Arpit Dutt and Ar. Radhika Dutt in the year 2014 and involved in architecture design, landscape and interior design.</p>
+    <p class="reveal in">The firm works as a studio, deriving architectural solutions through study, analysis and exploration of visual, spatial, formal, social and technological ideas. The studio is also known for its innovative use of local materials. Currently, the studio is working on different scales of projects like commercial and residential interior design, weekend villa, township, resorts, residential, commercial and high-rise.</p>
+    <p class="reveal in">The meticulous attention to detail and collaborative approach of the firm ensures that design exceeds expectations. From aesthetics to functionality, the studio considers every aspect of design, delivering practical and visually stunning solutions.</p>
+    <div class="divider"></div>
+  </section>
+
+  <section class="founders">
+    <div class="founder reveal">
+      <div class="portrait img-mask"><div class="ph stone"></div></div>
+      <div class="nm"><span class="init">R</span>adhika Dutt</div>
+      <p class="bio">Radhika Dutt has 15 years of experience in the field of architecture, interior and planning. During this period, she has worked with different firms like Leo Pereira, Raghav consultants, PPAL, Stantec, Archimedes and Blocher partners. She has worked in various cities like Delhi, Ahmedabad and Surat and gained different experience on different typologies of architecture projects like residential, commercial, institutional, planning and hospitals. Currently she is working as a part of RA Design Studio and is active on different scale of architecture and interior projects.</p>
+    </div>
+    <div class="founder reveal">
+      <div class="portrait img-mask"><div class="ph basalt"></div></div>
+      <div class="nm"><span class="init">A</span>rpit Dutt</div>
+      <p class="bio">Arpit Dutt has 18 years of experience in the field of architecture, interior and landscape. During this period, he has worked with different firms and has experience in various projects like residential, commercial, institutional, planning, urban design and landscape projects. He has also specialized in landscape architecture from SPA, Delhi and has gained professional experience as a landscape architect. He has worked with NMP design which is an active firm in Delhi NCR. He was associated with Hiren Patel Architects as landscape architect.</p>
+    </div>
+  </section>
+
+  <section class="team-head">
+    <h2 class="reveal in">Our Team</h2>
+  </section>
+
+  <section class="team-grid-lg" id="team">
+    <!-- filled by JS -->
+  </section>
+</main>
+
+<div id="footer-slot"></div>
+<script src="assets/data.js?v=24"></script>
+<script src="assets/partials.js?v=24"></script>
+<script src="assets/site.js?v=24"></script>
+<script>
+(function(){
+  const team = [
+    { n: "Rakshanda Moog",  r: "Architect",        s: "teak" },
+    { n: "Anuj Somani",     r: "Architect",        s: "basalt" },
+    { n: "Foram Jani",      r: "Architect",        s: "stone" },
+    { n: "Hussain Irawala", r: "Architect",        s: "concrete" },
+    { n: "Kaveesha Shah",   r: "Interior Lead",    s: "ivory" },
+    { n: "Mansi Mistry",    r: "Planning Lead",    s: "lime" },
+    { n: "Purvi Tank",      r: "Sr. Architect",    s: "slate" },
+    { n: "Rahi Jain",       r: "Architect",        s: "marsh" },
+  ];
+  document.getElementById("team").innerHTML = team.map(t => `
+    <div class="p reveal in">
+      <div class="img img-mask in"><div class="ph ${t.s}"></div></div>
+      <div class="name">${t.n}</div>
+      <div class="role">${t.r}</div>
+    </div>`).join("");
+  setTimeout(() => { if (window.RA) { window.RA.hydratePh(); window.RA.triggerReveals(); } }, 10);
+})();
+</script>
+</body>
+</html>

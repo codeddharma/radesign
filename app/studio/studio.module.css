@@ -1,0 +1,175 @@
+/* Page-scoped styles ported verbatim from the inline <style> block in
+   design_handoff/source/studio.html. The wrapper classes (.founders, .teamHead, .teamGrid) are CSS-Module-scoped and applied
+   via `styles.*`. Their descendant elements use plain global class names in the
+   JSX (portrait, nm, bio, init, brand, divider, p, img, name, role), so those
+   selectors are wrapped in :global() to match. */
+
+/* First section on the page: its top padding clears the fixed nav. */
+.foundersSection {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 140px var(--page-pad) 16px;
+}
+/* Matches the site-wide .eyebrow (red rule + label), in ink rather than grey. */
+.sectionLabel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin-bottom: 20px;
+}
+.sectionLabel::before {
+  content: "";
+  width: 28px;
+  height: 1px;
+  background: var(--red);
+}
+.founders {
+  display: grid;
+  grid-template-columns: 5fr 6fr;
+  gap: 72px;
+  align-items: stretch;
+  padding: 40px 0 48px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.foundersPhoto {
+  align-self: start;
+  position: relative;
+  aspect-ratio: 4/5;
+  overflow: hidden;
+  background: var(--line-2);
+}
+/* Profile as one justified block: straight edges both sides, no hyphen breaks. */
+/* Text column spans the photo's height with names + profile sitting at the
+   bottom, so the last line lands on the photo's bottom edge. */
+.foundersText {
+  max-width: 580px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.names {
+  font-family: var(--display);
+  font-size: clamp(22px, 2vw, 28px);
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0 0 24px;
+}
+.names b {
+  color: var(--red);
+  font-weight: 700;
+}
+.amp {
+  font-size: 0.6em;
+  vertical-align: baseline;
+  color: var(--ink-2);
+  margin: 0 0.6em; /* clear breathing room so the two names read as separate */
+}
+.bio {
+  font-size: 17px;
+  line-height: 2;
+  color: var(--ink-2);
+  text-align: justify;
+  hyphens: none;
+  text-wrap: pretty;
+  margin-bottom: 24px;
+}
+.bio:last-child {
+  margin-bottom: -0.45em; /* trim line-height leading so the text ends on the photo's edge */
+}
+
+.teamHead {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 96px var(--page-pad) 28px;
+}
+.teamHead h2 {
+  font-family: var(--display);
+  font-size: clamp(22px, 2vw, 28px); /* same as founder names */
+  line-height: 1.15;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+.teamHead h2::first-letter {
+  color: var(--red);
+  font-weight: 700;
+}
+
+.teamGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--page-pad) 120px;
+}
+.teamGrid :global(.p) {
+  padding: 26px 24px 30px;
+  border-top: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  transition: background 0.3s var(--ease);
+}
+.teamGrid :global(.p:nth-child(4n + 1)) {
+  padding-left: 0;
+}
+.teamGrid :global(.p:nth-child(4n)) {
+  border-right: 0;
+  padding-right: 0;
+}
+.teamGrid :global(.p:hover) {
+  background: var(--paper-2);
+}
+.teamGrid :global(.p .img) {
+  aspect-ratio: 1/1;
+  background: var(--line-2);
+  margin-bottom: 14px;
+  filter: grayscale(1);
+}
+.teamGrid :global(.p .img .ph) {
+  height: 100%;
+}
+.teamGrid :global(.p .name) {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 0;
+}
+.teamGrid :global(.p .role) {
+  font-size: 13px;
+  color: var(--ink-2);
+  margin-top: 4px;
+}
+
+@media (max-width: 860px) {
+  .founders {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding: 32px 0 38px;
+  }
+  .teamGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .teamGrid :global(.p:nth-child(odd)) {
+    padding-left: 0;
+    padding-right: 20px;
+    border-right: 1px solid var(--line);
+  }
+  .teamGrid :global(.p:nth-child(even)) {
+    padding-left: 20px;
+    padding-right: 0;
+    border-right: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .foundersSection { padding-top: 116px; }
+  .bio { text-align: left; }
+  .teamHead { padding-top: 64px; }
+}

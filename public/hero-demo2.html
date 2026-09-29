@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>R.A. — The Exploded Maquette (three.js hero demo)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #16120d;
+    --paper: #f2eee7;
+    --paper-2: #e7e0d6;
+    --red: #c8102e;
+    --mute: #8a8175;
+    --line: rgba(22, 18, 13, 0.14);
+    --serif: "Fraunces", Georgia, serif;
+    --sans: "Archivo", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+
+  /* top bar */
+  .topbar { position: fixed; inset: 0 0 auto 0; z-index: 40; display: flex; align-items: center; justify-content: space-between; padding: 22px clamp(20px, 4vw, 54px); mix-blend-mode: multiply; }
+  .brand { font-family: var(--serif); font-weight: 500; font-size: 22px; }
+  .topbar nav { display: flex; gap: 26px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; }
+  .topbar nav a { color: inherit; text-decoration: none; opacity: 0.7; transition: opacity 0.3s, color 0.3s; }
+  .topbar nav a:hover { opacity: 1; color: var(--red); }
+  .topbar .coord { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--mute); }
+  @media (max-width: 720px) { .topbar nav { display: none; } }
+
+  /* hero */
+  .hero { position: relative; height: 100vh; min-height: 640px; overflow: hidden;
+    background: radial-gradient(120% 120% at 72% 8%, #faf7f2 0%, var(--paper) 46%, var(--paper-2) 100%); }
+  .hero::before { /* blueprint grid */
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1; opacity: 0.45;
+    background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 78px 78px;
+    -webkit-mask-image: radial-gradient(115% 100% at 60% 45%, #000 52%, transparent 100%);
+    mask-image: radial-gradient(115% 100% at 60% 45%, #000 52%, transparent 100%); }
+  #stage { position: absolute; inset: 0; z-index: 2; touch-action: none; cursor: grab; }
+  #stage.grabbing { cursor: grabbing; }
+  .loading { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--mute); transition: opacity 0.6s var(--ease); }
+
+  /* title overlay */
+  .scrim { position: absolute; inset: 0; z-index: 3; pointer-events: none;
+    background: linear-gradient(92deg, var(--paper) 2%, rgba(242,238,231,0.86) 24%, rgba(242,238,231,0.3) 48%, rgba(242,238,231,0) 66%); }
+  .overlay { position: absolute; z-index: 4; left: clamp(20px, 5vw, 86px); top: 50%; transform: translateY(-50%); max-width: min(560px, 60vw); pointer-events: none; }
+  .overlay .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--mute); display: flex; align-items: center; gap: 12px; opacity: 0; animation: fadeUp 0.9s var(--ease) 0.2s both; }
+  .overlay .kicker::before { content: ""; width: 38px; height: 1px; background: var(--red); }
+  .overlay h1 { font-family: var(--serif); font-weight: 300; font-size: clamp(44px, 7.6vw, 104px); line-height: 0.97; letter-spacing: -0.02em; margin-top: 18px; }
+  .overlay h1 .ln { display: block; overflow: hidden; }
+  .overlay h1 .ln span { display: block; transform: translateY(110%); animation: lineUp 1.05s var(--ease) both; }
+  .overlay h1 .ln:nth-child(1) span { animation-delay: 0.3s; }
+  .overlay h1 .ln:nth-child(2) span { animation-delay: 0.42s; }
+  .overlay h1 em { font-style: italic; font-weight: 400; color: var(--red); }
+  .overlay .sub { margin-top: 24px; max-width: 34ch; font-size: clamp(14px, 1.05vw, 16px); line-height: 1.6; color: #4a443c; opacity: 0; animation: fadeUp 0.9s var(--ease) 0.7s both; }
+
+  /* interaction hint + annotations */
+  .hint { position: absolute; z-index: 5; left: clamp(20px, 5vw, 86px); bottom: 40px; display: flex; gap: 22px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mute); opacity: 0; animation: fadeUp 1s var(--ease) 1.1s both; }
+  .hint b { color: var(--ink); font-weight: 500; }
+  .hint .k { display: inline-flex; align-items: center; gap: 7px; }
+  .hint .k::before { content: ""; width: 6px; height: 6px; border: 1px solid var(--red); border-radius: 50%; }
+  .annot { position: absolute; z-index: 5; font-family: var(--mono); color: var(--mute); pointer-events: none; }
+  .annot.axo { top: 26px; right: clamp(20px, 4vw, 54px); font-size: 11px; letter-spacing: 0.18em; opacity: 0; animation: fadeUp 1s var(--ease) 1s both; }
+  .annot.axo b { color: var(--red); font-weight: 500; }
+  .annot.idx { bottom: 28px; right: clamp(20px, 4vw, 54px); font-size: 12px; letter-spacing: 0.16em; opacity: 0; animation: fadeUp 1s var(--ease) 1.15s both; }
+  .annot.idx b { color: var(--ink); font-weight: 500; }
+
+  @keyframes lineUp { to { transform: translateY(0); } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* below: archive */
+  .below { padding: clamp(60px, 9vw, 130px) clamp(20px, 5vw, 86px); }
+  .below .head { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--line); padding-bottom: 18px; margin-bottom: 34px; }
+  .below .head h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(22px, 3vw, 34px); }
+  .below .head span { font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mute); }
+  .masonry { columns: 4 260px; column-gap: 16px; }
+  .masonry .cell { break-inside: avoid; margin-bottom: 16px; overflow: hidden; border: 1px solid var(--line); background: #fff; }
+  .masonry .cell img { display: block; width: 100%; height: auto; transition: transform 0.9s var(--ease); }
+  .masonry .cell:hover img { transform: scale(1.05); }
+
+  @media (max-width: 680px) { .overlay { max-width: 86vw; } .scrim { background: linear-gradient(180deg, var(--paper) 12%, rgba(242,238,231,0.5) 46%, rgba(242,238,231,0) 78%); } .hint { flex-direction: column; gap: 8px; } }
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">R.A. <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)">Design&nbsp;Studio</span></div>
+    <nav><a href="#">Work</a><a href="#">Studio</a><a href="#">Press</a><a href="#">Contact</a></nav>
+    <div class="coord">23.02°N · 72.57°E</div>
+  </header>
+
+  <section class="hero">
+    <canvas id="stage"></canvas>
+    <div class="loading" id="loading">Assembling model…</div>
+    <div class="scrim"></div>
+
+    <div class="overlay">
+      <div class="kicker">Est. 2014 — Ahmedabad</div>
+      <h1>
+        <span class="ln"><span>A studio,</span></span>
+        <span class="ln"><span><em>in section.</em></span></span>
+      </h1>
+      <p class="sub">Every project, stacked into one model. Drag to walk around it; scroll to pull it apart.</p>
+    </div>
+
+    <div class="hint">
+      <span class="k">drag to <b>orbit</b></span>
+      <span class="k">scroll to <b>explode</b></span>
+    </div>
+    <div class="annot axo">PROJECTION <b>AXONOMETRIC</b></div>
+    <div class="annot idx">PLATES <b>06</b> / 2014—26</div>
+  </section>
+
+  <section class="below">
+    <div class="head"><h2>The archive</h2><span>All images · below the fold</span></div>
+    <div class="masonry" id="masonry"></div>
+  </section>
+
+<script type="module">
+import * as THREE from "three";
+
+const NAMES = { 1: "HABITAT 0", 2: "SAANVI NIRMAN", 3: "HILLVIEW RESORT", 8: "ROSEATE ROOTS", 9: "SHADES OF NATURE" };
+const COUNTS = { 1: 9, 2: 9, 3: 9, 8: 9, 9: 8 };
+const src = (p, n) => `media/projects/${p}/${n}.jpg`;
+
+// Six plates for the maquette — one strong landscape shot per "floor".
+const PLATES = [[3,"01"],[1,"01"],[8,"02"],[2,"03"],[9,"04"],[1,"06"]];
+
+const INK = 0x16120d, CREAM = 0xefe9e0, REDC = 0xc8102e;
+const PLATE_W = 3.4, THICK = 0.12;
+const GAP_MIN = THICK + 0.06;   // collapsed → near-solid block
+const GAP_MAX = 1.9;            // fully exploded
+
+const canvas = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+camera.position.set(5.2, 5.6, 7.4);
+camera.lookAt(0, 0, 0);
+
+const root = new THREE.Group();        // orbits
+scene.add(root);
+const plates = new THREE.Group();      // the explodable stack
+root.add(plates);
+
+const n = PLATES.length;
+const units = [];
+let loaded = 0;
+const loader = new THREE.TextureLoader();
+loader.crossOrigin = "anonymous";
+
+PLATES.forEach(([p, num], i) => {
+  loader.load(src(p, num), (tex) => {
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    const aspect = (tex.image && tex.image.width / tex.image.height) || 1.5;
+    const w = PLATE_W, d = PLATE_W / aspect;             // top-face footprint (w × d)
+
+    const unit = new THREE.Group();
+    // slab box: photo on the top (+Y) face, cream on the rest
+    const side = new THREE.MeshBasicMaterial({ color: CREAM });
+    const top = new THREE.MeshBasicMaterial({ map: tex });
+    const box = new THREE.Mesh(
+      new THREE.BoxGeometry(w, THICK, d),
+      [side, side, top, side.clone(), side, side]   // [+x,-x,+y(top),-y,+z,-z]
+    );
+    unit.add(box);
+    // ink outline (architectural linework)
+    const edges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(box.geometry),
+      new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 0.4 })
+    );
+    unit.add(edges);
+    // level line: thin marker extending past the plate on +X
+    const lvGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-w / 2, 0, d / 2 + 0.05),
+      new THREE.Vector3(w / 2 + 0.7, 0, d / 2 + 0.05),
+    ]);
+    const lv = new THREE.LineSegments(lvGeo, new THREE.LineBasicMaterial({ color: i === 0 ? REDC : INK, transparent: true, opacity: i === 0 ? 0.9 : 0.35 }));
+    unit.add(lv);
+
+    plates.add(unit);
+    units[i] = { unit, w, d };
+    loaded++;
+    if (loaded === n) onReady();
+  });
+});
+
+// structural corner columns (added once footprint is known)
+function addColumns(maxW, maxD) {
+  const H = (n - 1) * GAP_MAX * 0.5 + 1.2;
+  const corners = [[-maxW / 2, -maxD / 2], [maxW / 2, -maxD / 2], [-maxW / 2, maxD / 2], [maxW / 2, maxD / 2]];
+  corners.forEach(([x, z]) => {
+    const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, -H, z), new THREE.Vector3(x, H, z)]);
+    root.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 0.18 })));
+  });
+}
+
+// ground: grid + soft contact shadow
+function addGround(maxW, maxD) {
+  const grid = new THREE.GridHelper(22, 22, INK, INK);
+  grid.material.transparent = true; grid.material.opacity = 0.12;
+  grid.position.y = -3.2; root.add(grid);
+
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const ctx = c.getContext("2d");
+  const grd = ctx.createRadialGradient(64, 64, 6, 64, 64, 64);
+  grd.addColorStop(0, "rgba(22,18,13,0.34)"); grd.addColorStop(1, "rgba(22,18,13,0)");
+  ctx.fillStyle = grd; ctx.fillRect(0, 0, 128, 128);
+  const shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(maxW * 2.4, maxD * 2.4),
+    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false })
+  );
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = -3.18; root.add(shadow);
+}
+
+let ready = false;
+function onReady() {
+  const maxW = Math.max(...units.map((u) => u.w));
+  const maxD = Math.max(...units.map((u) => u.d));
+  addColumns(maxW + 0.5, maxD + 0.5);
+  addGround(maxW, maxD);
+  ready = true;
+  const el = document.getElementById("loading"); el.style.opacity = "0"; setTimeout(() => el.remove(), 700);
+}
+
+// ---- interaction ----
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let rotTarget = 0, rot = 0, tiltTarget = -0.32, tilt = -0.32;
+let explodeTarget = 0.42, explode = 0;     // 0..1
+let intro = reduce ? 1 : 0;                 // explode-in on load
+let dragging = false, lastX = 0, lastY = 0, vel = 0, autoIdle = 0;
+
+canvas.addEventListener("pointerdown", (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; vel = 0; autoIdle = 0; canvas.classList.add("grabbing"); canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener("pointermove", (e) => {
+  if (!dragging) return;
+  const dx = e.clientX - lastX, dy = e.clientY - lastY;
+  lastX = e.clientX; lastY = e.clientY;
+  rotTarget += dx * 0.006; vel = dx * 0.006;
+  tiltTarget = Math.max(-0.95, Math.min(0.2, tiltTarget - dy * 0.004));
+});
+const endDrag = (e) => { dragging = false; autoIdle = 0; canvas.classList.remove("grabbing"); if (e.pointerId != null && canvas.hasPointerCapture?.(e.pointerId)) canvas.releasePointerCapture(e.pointerId); };
+canvas.addEventListener("pointerup", endDrag);
+canvas.addEventListener("pointercancel", endDrag);
+canvas.addEventListener("wheel", (e) => { e.preventDefault(); explodeTarget = Math.max(0, Math.min(1, explodeTarget + e.deltaY * 0.0016)); }, { passive: false });
+
+function resize() {
+  const w = window.innerWidth, h = Math.max(window.innerHeight, 640);
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  // zoom out a touch on narrow screens
+  const dist = w < 720 ? 11 : 9.4;
+  const dir = new THREE.Vector3(5.2, 5.6, 7.4).normalize();
+  camera.position.copy(dir.multiplyScalar(dist)); camera.lookAt(0, 0, 0);
+}
+window.addEventListener("resize", resize);
+resize();
+
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+
+  if (intro < 1) intro = Math.min(1, intro + dt * 0.6);
+  if (!dragging) { autoIdle += dt; if (autoIdle > 1.4 && !reduce) rotTarget += dt * 0.12; }
+  if (!dragging) { rotTarget += vel; vel *= 0.92; if (Math.abs(vel) < 0.0002) vel = 0; }
+
+  rot += (rotTarget - rot) * 0.08;
+  tilt += (tiltTarget - tilt) * 0.08;
+  explode += (explodeTarget - explode) * 0.07;
+
+  root.rotation.y = rot;
+  root.rotation.x = tilt;
+
+  const gap = GAP_MIN + (GAP_MAX - GAP_MIN) * explode;
+  const eff = gap * intro + GAP_MIN * (1 - intro);
+  for (let i = 0; i < units.length; i++) {
+    if (units[i]) units[i].unit.position.y = (i - (n - 1) / 2) * eff;
+  }
+  renderer.render(scene, camera);
+}
+animate();
+
+// ---- below-the-fold archive ----
+const ARCHIVE = [];
+[1, 2, 3, 8, 9].forEach((p) => { for (let i = 1; i <= COUNTS[p]; i++) ARCHIVE.push([p, String(i).padStart(2, "0")]); });
+const m = document.getElementById("masonry");
+ARCHIVE.forEach(([p, num]) => {
+  const d = document.createElement("div"); d.className = "cell";
+  const img = document.createElement("img"); img.src = src(p, num); img.loading = "lazy"; img.alt = NAMES[p];
+  d.appendChild(img); m.appendChild(d);
+});
+</script>
+</body>
+</html>

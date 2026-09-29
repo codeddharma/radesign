@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Project — R.A. Design Studio</title>
+<meta name="description" content="Project case study by R.A. Design Studio — architecture, interiors and planning, Ahmedabad."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet"/>
+<link rel="icon" type="image/png" href="assets/logo-ra.png"/>
+<link rel="stylesheet" href="assets/site.css?v=24"/>
+<script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+</head>
+<body>
+<script>window.__page = { active: "work" };</script>
+<div id="nav-slot"></div>
+
+<main class="page">
+  <!-- HERO COLLAGE — Pinterest-style, randomized -->
+  <section class="proj-hero-collage reveal in" id="proj-hero"></section>
+
+  <!-- TITLE & META -->
+  <section class="proj-caption">
+    <div class="t">
+      <div class="label mb-s" id="p-cat"></div>
+      <h1 id="p-title"></h1>
+    </div>
+    <div class="meta-grid" id="p-meta"></div>
+  </section>
+
+  <!-- LEDE & BODY -->
+  <section class="proj-body">
+    <p class="lede-lg reveal" id="p-lede"></p>
+    <p class="reveal" id="p-body"></p>
+  </section>
+
+  <!-- FLEXIBLE GALLERY (renders sectioned by JS) -->
+  <div id="gallery-host" class="proj-gallery-flex"></div>
+
+  <!-- RELATED -->
+  <section class="related">
+    <div class="related-head">
+      <h3>Related <em  class="em-serif">work</em></h3>
+      <a href="work.html" style="font-size: 12px; color: var(--red); border-bottom: 1px solid var(--red); padding-bottom: 2px;">View all projects →</a>
+    </div>
+    <div class="related-grid" id="related-grid"></div>
+  </section>
+
+  <!-- NEXT PROJECT (luxe transition) -->
+  <a class="next-proj-luxe" id="next-luxe" href="#">
+    <div>
+      <div class="label">Next project</div>
+      <div class="title" id="nl-title"></div>
+      <div class="sub" id="nl-sub"></div>
+    </div>
+    <div class="preview img-mask in"><div class="ph" id="nl-img" style="height:100%;"></div></div>
+    <div class="arr">→</div>
+  </a>
+</main>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true">
+  <button class="lb-prev" id="lb-prev" aria-label="Previous">←</button>
+  <div class="lb-img"><div class="ph" id="lb-ph"></div></div>
+  <button class="lb-next" id="lb-next" aria-label="Next">→</button>
+  <button class="lb-close" id="lb-close" aria-label="Close">Close</button>
+  <div class="lb-counter" id="lb-counter">01 / 01</div>
+  <div class="lb-caption" id="lb-caption"></div>
+</div>
+
+<div id="footer-slot"></div>
+
+<script src="assets/data.js?v=24"></script>
+<script src="assets/partials.js?v=24"></script>
+<script src="assets/site.js?v=24"></script>
+<script>
+(function(){
+  const q = new URLSearchParams(location.search);
+  const slug = q.get("p") || "oasis";
+  const projects = window.RA_PROJECTS;
+  const p = projects.find(x => x.slug === slug) || projects[0];
+  const idx = projects.indexOf(p);
+  const next = projects[(idx + 1) % projects.length];
+
+  document.title = `${p.title} — R.A. Design Studio`;
+  document.getElementById("p-cat").textContent = p.type;
+  document.getElementById("p-title").innerHTML = p.title.replace(/(\w+)$/, '<em>$1</em>');
+  document.getElementById("p-meta").innerHTML = [
+    { k: "Location", v: p.location },
+    { k: "Year",     v: p.year },
+    { k: "Area",     v: p.area },
+    { k: "Status",   v: p.status },
+  ].map(m => `<div><div class="k">${m.k}</div><div class="v">${m.v}</div></div>`).join("");
+  document.getElementById("p-lede").textContent = p.lede;
+  document.getElementById("p-body").innerHTML = `Built with ${p.materials.join(", ")}. Project lead: <strong style="color:var(--ink);font-weight:500;">${p.credits.lead}</strong>. Team: ${p.credits.team || "—"}.`;
+
+  /* -------- Flexible gallery render -------- */
+  const photos = window.RA_PROJECT_GALLERY(p);
+
+  /* -------- Hero collage (Pinterest-style, randomized each load) -------- */
+  (function buildHero(){
+    const hero = document.getElementById("proj-hero");
+    const shuffle = (arr) => arr.map(v => [Math.random(), v]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+
+    // grid size matches CSS breakpoints
+    const w = window.innerWidth;
+    const cols = w < 560 ? 4 : w < 900 ? 6 : 8;
+    const rows = w < 560 ? 8 : w < 900 ? 7 : 6;
+    const targetCells = cols * rows;
+
+    // shuffled, repeating pool of photo indices
+    let pool = [];
+    while (pool.length < targetCells) pool = pool.concat(shuffle(photos.map((_, i) => i)));
+
+    // small varied tile spans (1-2 cols × 1-2 rows) — packed with dense flow
+    const shapes = [
+      { c: 1, r: 1, w: 4 },  // small square — common
+      { c: 2, r: 1, w: 2 },  // wide
+      { c: 1, r: 2, w: 2 },  // tall
+      { c: 2, r: 2, w: 1 },  // big — rare
+    ];
+    const weighted = shapes.flatMap(s => Array(s.w).fill(s));
+
+    let area = 0, n = 0, html = "";
+    // fill slightly beyond grid; overflow:hidden clips the tail
+    while (area < targetCells + cols) {
+      const s = weighted[Math.floor(Math.random() * weighted.length)];
+      const pi = pool[n % pool.length];
+      const ph = photos[pi];
+      html += `
+        <div class="tile" data-i="${pi}"
+             style="grid-column: span ${s.c}; grid-row: span ${s.r}; animation-delay: ${(n * 0.03).toFixed(2)}s;">
+          <div class="ph ${ph.swatch}"></div>
+        </div>`;
+      area += s.c * s.r;
+      n++;
+    }
+    hero.innerHTML = html;
+  })();
+
+  const host = document.getElementById("gallery-host");
+
+  // Build layout per section: alternate full-bleed / 2-up / 3-up rows based on count
+  const sectionMap = {};
+  let currentSec = null;
+  photos.forEach((ph, i) => {
+    if (ph.section) currentSec = ph.section;
+    (sectionMap[currentSec] = sectionMap[currentSec] || []).push({ ...ph, idx: i });
+  });
+
+  // span pattern by count
+  function layout(count, idx) {
+    // returns col-span out of 12 for each cell
+    if (count === 1) return [12];
+    if (count === 2) return [6, 6];
+    if (count === 3) return [4, 4, 4];
+    if (count === 4) return [6, 6, 4, 8];
+    // 5+ alternating
+    const pat = [8, 4, 4, 4, 4, 6, 6, 12, 7, 5];
+    return Array.from({length: count}, (_, i) => pat[i % pat.length]);
+  }
+
+  let html = "";
+  let secIdx = 0;
+  for (const secName of Object.keys(sectionMap)) {
+    const items = sectionMap[secName];
+    secIdx++;
+    html += `
+      <div class="proj-section-head">
+        <div class="t">${secName} <em>·</em> <span style="color: var(--mute); font-size: 80%;">${items.length} photographs</span></div>
+        <div class="n">${String(secIdx).padStart(2,'0')} / ${Object.keys(sectionMap).length}</div>
+      </div>
+      <div class="flex-grid">
+    `;
+    const spans = layout(items.length);
+    items.forEach((it, i) => {
+      const sp = spans[i];
+      const ratio = it.ratio || "4/3";
+      const cls = it.swatch.split(" ").join(" "); // already includes variant
+      html += `
+        <div class="cell img-mask reveal" data-i="${it.idx}" style="grid-column: span ${sp}; aspect-ratio: ${ratio};">
+          <div class="ph ${cls}" style="height:100%;"></div>
+          ${it.caption ? `<div class="cap">${it.caption}</div>` : ''}
+        </div>`;
+    });
+    html += `</div>`;
+  }
+  host.innerHTML = html;
+
+  /* -------- Lightbox -------- */
+  const lb = document.getElementById("lightbox");
+  const lbPh = document.getElementById("lb-ph");
+  const lbCounter = document.getElementById("lb-counter");
+  const lbCaption = document.getElementById("lb-caption");
+  let lbIndex = 0;
+
+  function openLB(i) {
+    lbIndex = i;
+    setLB();
+    lb.classList.add("open");
+    document.body.style.overflow = "hidden";
+    if (window.__lenis) window.__lenis.stop();
+  }
+  function closeLB() {
+    lb.classList.remove("open");
+    document.body.style.overflow = "";
+    if (window.__lenis) window.__lenis.start();
+  }
+  function setLB() {
+    const ph = photos[lbIndex];
+    lbPh.className = `ph ${ph.swatch}`;
+    lbPh.removeAttribute("data-hydrated");
+    lbPh.innerHTML = "";
+    if (window.RA) window.RA.hydratePh(lb);
+    lbPh.style.aspectRatio = ph.ratio || "4/3";
+    lbCounter.textContent = `${String(lbIndex+1).padStart(2,'0')} / ${String(photos.length).padStart(2,'0')}`;
+    lbCaption.textContent = ph.caption || `${p.title} — image ${lbIndex+1}`;
+  }
+  function lbPrev() { lbIndex = (lbIndex - 1 + photos.length) % photos.length; setLB(); }
+  function lbNext() { lbIndex = (lbIndex + 1) % photos.length; setLB(); }
+
+  document.addEventListener("click", (e) => {
+    const cell = e.target.closest(".flex-grid .cell, .proj-hero-collage .tile");
+    if (cell) openLB(parseInt(cell.dataset.i));
+  });
+  document.getElementById("lb-close").addEventListener("click", closeLB);
+  document.getElementById("lb-prev").addEventListener("click", lbPrev);
+  document.getElementById("lb-next").addEventListener("click", lbNext);
+  lb.addEventListener("click", (e) => { if (e.target === lb) closeLB(); });
+  document.addEventListener("keydown", (e) => {
+    if (!lb.classList.contains("open")) return;
+    if (e.key === "Escape") closeLB();
+    if (e.key === "ArrowLeft") lbPrev();
+    if (e.key === "ArrowRight") lbNext();
+  });
+
+  /* -------- Related projects (3 from same type, else next 3) -------- */
+  const related = projects.filter(x => x.slug !== p.slug && x.type === p.type).slice(0, 3);
+  while (related.length < 3) {
+    const nxt = projects[(projects.indexOf(related[related.length-1] || p) + 1) % projects.length];
+    if (nxt.slug !== p.slug && !related.includes(nxt)) related.push(nxt); else break;
+  }
+  document.getElementById("related-grid").innerHTML = related.map(r => `
+    <a href="project.html?p=${r.slug}">
+      <div class="img-wrap img-mask in"><div class="ph ${r.swatch}" style="height:100%;"></div></div>
+      <div class="ttl">${r.title}</div>
+      <div class="sub">${r.location} · ${r.year}</div>
+    </a>`).join("");
+
+  /* -------- Next project luxe -------- */
+  document.getElementById("next-luxe").href = `project.html?p=${next.slug}`;
+  document.getElementById("nl-title").innerHTML = next.title.replace(/(\w+)$/, '<em>$1</em>');
+  document.getElementById("nl-sub").textContent = `${next.type} · ${next.location} · ${next.year}`;
+  document.getElementById("nl-img").className = `ph ${next.swatch}`;
+
+  setTimeout(() => {
+    if (window.RA) { window.RA.hydratePh(); window.RA.triggerReveals(); }
+    document.querySelectorAll(".reveal, .img-mask").forEach(el => el.classList.add("in"));
+  }, 10);
+})();
+</script>
+</body>
+</html>

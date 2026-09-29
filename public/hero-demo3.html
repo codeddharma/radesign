@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>R.A. — Frontal Curved Carousel (three.js hero demo)</title>
+<style>
+  /* Hero-only demo: system fonts, no site chrome — just the WebGL showcase. */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background:
+      radial-gradient(120% 90% at 50% 16%, #faf7f2 0%, #f1ece4 52%, #e6ded3 100%);
+    color: #16120d;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    overflow: hidden;
+  }
+  .hero { position: relative; width: 100vw; height: 100vh; min-height: 560px; overflow: hidden; }
+  #stage { position: absolute; inset: 0; z-index: 2; touch-action: none; cursor: grab; display: block; }
+  #stage.grabbing { cursor: grabbing; }
+  /* subtle vignette to seat the carousel */
+  .hero::after { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+    background: radial-gradient(120% 100% at 50% 45%, transparent 58%, rgba(40,30,20,0.10) 100%); }
+
+  .caption { position: absolute; left: 0; right: 0; bottom: 7%; z-index: 4; text-align: center; pointer-events: none; }
+  .caption .name { font-size: clamp(20px, 3vw, 34px); font-weight: 500; letter-spacing: 0.01em; transition: opacity 0.35s ease; }
+  .caption .meta { margin-top: 8px; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: #8a8175; }
+  .caption .meta b { color: #c8102e; font-weight: 600; }
+
+  .hint { position: absolute; left: 50%; top: 24px; transform: translateX(-50%); z-index: 4;
+    font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase; color: #8a8175; display: flex; gap: 18px; pointer-events: none; }
+  .hint .k { display: inline-flex; align-items: center; gap: 7px; }
+  .hint .k::before { content: ""; width: 6px; height: 6px; border: 1px solid #c8102e; border-radius: 50%; }
+  .hint b { color: #16120d; font-weight: 600; }
+
+  .loading { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #8a8175; transition: opacity 0.6s ease; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+  <section class="hero">
+    <canvas id="stage"></canvas>
+    <div class="hint"><span class="k">drag / scroll to <b>browse</b></span></div>
+    <div class="caption"><div class="name" id="capName">&nbsp;</div><div class="meta" id="capMeta">&nbsp;</div></div>
+    <div class="loading" id="loading">Loading…</div>
+  </section>
+
+<script type="module">
+import * as THREE from "three";
+
+const NAMES = { 1: "Habitat 0", 2: "Saanvi Nirman", 3: "Hillview Resort", 8: "Roseate Roots", 9: "Shades of Nature" };
+const src = (p, n) => `media/projects/${p}/${n}.jpg`;
+
+// Curated, image-forward set (one strong frame each).
+const SHOTS = [[3,"01"],[1,"01"],[8,"02"],[2,"03"],[9,"04"],[1,"06"],[3,"05"],[8,"04"],[2,"05"]];
+const N = SHOTS.length;
+
+const PAPER = 0xf1ece4;
+const H = 3.3;             // shared plane height → uniform rhythm, no cropping
+const SPACING = 3.55;      // x distance between neighbours
+const CURVE = 0.46;        // how far side cards recede in z
+const BOOST = 0.16;        // extra scale for the centred card
+const VISIBLE = 4.3;       // cull cards beyond this offset
+
+const canvas = document.getElementById("stage");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(PAPER, 9, 17);
+
+const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+camera.position.set(0, 0, 8.6);
+camera.lookAt(0, 0, 0);
+
+// soft drop-shadow texture shared by every card
+function shadowTex() {
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const ctx = c.getContext("2d");
+  const g = ctx.createRadialGradient(64, 64, 8, 64, 64, 64);
+  g.addColorStop(0, "rgba(30,22,14,0.42)"); g.addColorStop(1, "rgba(30,22,14,0)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+}
+const SHADOW = shadowTex();
+
+const cards = [];
+let loaded = 0;
+const loader = new THREE.TextureLoader();
+loader.crossOrigin = "anonymous";
+
+SHOTS.forEach(([p, num], i) => {
+  loader.load(src(p, num), (tex) => {
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    const aspect = (tex.image && tex.image.width / tex.image.height) || 1.5;
+    const w = H * aspect;
+
+    const group = new THREE.Group();
+    // drop shadow (slightly larger, offset down)
+    const sh = new THREE.Mesh(
+      new THREE.PlaneGeometry(w * 1.22, H * 1.28),
+      new THREE.MeshBasicMaterial({ map: SHADOW, transparent: true, depthWrite: false, fog: false })
+    );
+    sh.position.set(0, -0.18, -0.05);
+    group.add(sh);
+    // the photo — faces the camera dead-on (no rotation → no foreshortening)
+    const mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, H),
+      new THREE.MeshBasicMaterial({ map: tex, transparent: true })
+    );
+    group.add(mesh);
+
+    scene.add(group);
+    cards[i] = { group, mesh, shadow: sh, w, project: p, num };
+    loaded++;
+    if (loaded === N) { const el = document.getElementById("loading"); el.style.opacity = "0"; setTimeout(() => el.remove(), 650); }
+  });
+});
+
+// wrapped offset of card i relative to the current index, in (-N/2, N/2]
+function offset(i, current) {
+  let p = ((i - current) % N + N) % N;
+  if (p > N / 2) p -= N;
+  return p;
+}
+
+// ---- interaction ----
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let current = 0, target = 0, vel = 0;
+let dragging = false, lastX = 0, moved = 0, idle = 0;
+let mx = 0, my = 0, camx = 0, camy = 0;
+
+canvas.addEventListener("pointerdown", (e) => { dragging = true; lastX = e.clientX; moved = 0; vel = 0; idle = 0; canvas.classList.add("grabbing"); canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener("pointermove", (e) => {
+  mx = (e.clientX / window.innerWidth - 0.5);
+  my = (e.clientY / window.innerHeight - 0.5);
+  if (!dragging) return;
+  const dx = e.clientX - lastX; lastX = e.clientX; moved += Math.abs(dx);
+  const d = dx / 230;
+  current -= d; target = current; vel = -d;
+});
+const end = (e) => { dragging = false; idle = 0; canvas.classList.remove("grabbing"); if (e.pointerId != null && canvas.hasPointerCapture?.(e.pointerId)) canvas.releasePointerCapture(e.pointerId); target = Math.round(current); };
+canvas.addEventListener("pointerup", end);
+canvas.addEventListener("pointercancel", end);
+canvas.addEventListener("wheel", (e) => { e.preventDefault(); current += (e.deltaY + e.deltaX) * 0.0022; target = Math.round(current); idle = 0; }, { passive: false });
+
+function resize() {
+  const w = window.innerWidth, h = Math.max(window.innerHeight, 560);
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  camera.position.z = w < 720 ? 11.5 : 8.6;
+}
+window.addEventListener("resize", resize);
+resize();
+
+let lastName = -1;
+const capName = document.getElementById("capName");
+const capMeta = document.getElementById("capMeta");
+
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+
+  if (!dragging) {
+    idle += dt;
+    // momentum, then gentle auto-drift, then snap to nearest card
+    if (Math.abs(vel) > 0.0004) { current += vel; vel *= 0.9; target = Math.round(current); }
+    else if (idle > 2.2 && !reduce) { current += dt * 0.12; target = current; }
+    else { current += (Math.round(current) - current) * 0.08; }
+  }
+
+  // mouse parallax
+  camx += (mx * 0.9 - camx) * 0.06;
+  camy += (-my * 0.5 - camy) * 0.06;
+  camera.position.x = camx; camera.position.y = camy; camera.lookAt(0, 0, 0);
+
+  for (let i = 0; i < cards.length; i++) {
+    const c = cards[i]; if (!c) continue;
+    const p = offset(i, current);
+    const a = Math.abs(p);
+    const vis = a <= VISIBLE;
+    c.group.visible = vis; if (!vis) continue;
+    c.group.position.x = p * SPACING;
+    c.group.position.z = -(p * p) * CURVE;
+    const s = 1 + BOOST * Math.max(0, 1 - a);          // centre card a touch larger
+    c.group.scale.setScalar(s);
+    const op = Math.max(0, Math.min(1, 1.18 - a * 0.24));
+    c.mesh.material.opacity = op;
+    c.shadow.material.opacity = op * 0.6;
+    c.group.renderOrder = Math.round(1000 - a * 100);
+  }
+
+  // caption follows the centred card
+  const centre = ((Math.round(current) % N) + N) % N;
+  if (centre !== lastName && cards[centre]) {
+    lastName = centre;
+    capName.textContent = NAMES[cards[centre].project];
+    capMeta.innerHTML = String(centre + 1).padStart(2, "0") + " <b>/</b> " + String(N).padStart(2, "0");
+  }
+
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>

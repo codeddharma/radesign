@@ -1,0 +1,8 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { getDb } from "@/lib/admin/db";
+export interface MediaAsset{id:string;src:string;filename:string;mime:string;width:number;height:number;size:number;alt:string;credit:string;state:"ready"|"processing"|"failed";archived:boolean;createdAt:string;}
+const map=(row:Record<string,unknown>):MediaAsset=>({id:String(row.id),src:String(row.src),filename:String(row.filename),mime:String(row.mime),width:Number(row.width),height:Number(row.height),size:Number(row.size),alt:String(row.alt),credit:String(row.credit),state:row.state as MediaAsset["state"],archived:Boolean(row.archived),createdAt:String(row.created_at)});
+export async function listMedia(){const db=await getDb();return (db.prepare("SELECT * FROM media ORDER BY created_at DESC").all() as Record<string,unknown>[]).map(map);}
+export async function archiveMedia(id:string){const db=await getDb();db.prepare("UPDATE media SET archived=1 WHERE id=?").run(id);return listMedia();}
+export async function saveUpload(file:File,bytes:Uint8Array,width:number,height:number,alt:string,credit:string){const db=await getDb();const extension=file.name.split(".").pop()?.toLowerCase()??"jpg";const id=`upload-${crypto.randomUUID()}`;const filename=`${id}.${extension}`;const relative=`/media/uploads/${filename}`;const target=path.join(process.cwd(),"public",relative);await mkdir(path.dirname(target),{recursive:true});await writeFile(target,bytes);db.prepare("INSERT INTO media (id,src,filename,mime,width,height,size,alt,credit,state,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(id,relative,file.name,file.type,width,height,file.size,alt,credit,"ready",new Date().toISOString());return (await listMedia()).find(item=>item.id===id);}

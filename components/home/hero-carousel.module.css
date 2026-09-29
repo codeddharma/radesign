@@ -1,0 +1,41 @@
+/* Co-located styles for HeroCarousel. Globals.css is not touched. */
+
+.root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 1200ms ease;
+  will-change: opacity;
+}
+
+.slideActive {
+  opacity: 1;
+}
+
+/* Subtle Ken-Burns drift on the active slide. The Media wrapper fills the
+   slide; we scale it slowly while it is active. */
+.slide :global(.media) {
+  transform: scale(1.04);
+  transition: transform 6000ms ease-out;
+}
+
+.slideActive :global(.media) {
+  transform: scale(1.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide {
+    transition: opacity 1ms linear;
+  }
+  .slide :global(.media),
+  .slideActive :global(.media) {
+    transform: none;
+    transition: none;
+  }
+}

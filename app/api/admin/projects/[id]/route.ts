@@ -1,0 +1,7 @@
+import { NextResponse } from "next/server";
+import { isAdminAuthenticated } from "@/lib/admin/auth";
+import { archiveAdminProject, getAdminProject, updateAdminProject } from "@/lib/admin/projects";
+import { validateProject } from "@/lib/admin/validation";
+export async function GET(_request:Request,{params}:{params:Promise<{id:string}>}){if(!(await isAdminAuthenticated()))return NextResponse.json({error:"Unauthorized"},{status:401});const {id}=await params;const project=await getAdminProject(id);return project?NextResponse.json({project}):NextResponse.json({error:"Not found"},{status:404});}
+export async function PATCH(request:Request,{params}:{params:Promise<{id:string}>}){if(!(await isAdminAuthenticated()))return NextResponse.json({error:"Unauthorized"},{status:401});const {id}=await params;const body=await request.json();const workflow=body.workflow;const issues=validateProject(body,workflow==="published");if(issues.some(issue=>issue.severity==="error"))return NextResponse.json({issues},{status:400});const project=await updateAdminProject(id,body,workflow);return project?NextResponse.json({project,issues}):NextResponse.json({error:"Not found"},{status:404});}
+export async function DELETE(_request:Request,{params}:{params:Promise<{id:string}>}){if(!(await isAdminAuthenticated()))return NextResponse.json({error:"Unauthorized"},{status:401});const {id}=await params;const project=await archiveAdminProject(id);return project?NextResponse.json({project}):NextResponse.json({error:"Not found"},{status:404});}

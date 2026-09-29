@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Work — R.A. Design Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet"/>
+<link rel="icon" type="image/png" href="assets/logo-ra.png"/>
+<link rel="stylesheet" href="assets/site.css?v=24"/>
+<script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+</head>
+<body>
+<script>window.__page = { active: "work" };</script>
+<div id="nav-slot"></div>
+
+<main class="page">
+  <section class="page-head">
+    <div class="container">
+      <h1 class="reveal in">Selected <em>work</em>.</h1>
+      <p class="lede reveal in">Twenty projects across residence, workplace, hospitality and cultural briefs. Built from the same rules: material honesty, restrained detail, a long regard for context.</p>
+    </div>
+  </section>
+
+  <section class="section tight">
+    <div class="container">
+      <div class="filter-bar" id="filters">
+        <button data-f="all" class="active">All <span class="text-mute">· <span id="cnt">20</span></span></button>
+        <button data-f="Residence">Residence</button>
+        <button data-f="Workplace">Workplace</button>
+        <button data-f="Studio">Studio</button>
+        <button data-f="Commercial">Commercial</button>
+        <button data-f="Cultural">Cultural</button>
+        <button data-f="Hospitality">Hospitality</button>
+        <button data-f="Adaptive">Adaptive re-use</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="section tight" style="padding-top: 20px;">
+    <div class="container">
+      <div class="masonry" id="gallery"></div>
+    </div>
+  </section>
+</main>
+
+<div id="footer-slot"></div>
+
+<script src="assets/data.js?v=24"></script>
+<script src="assets/partials.js?v=24"></script>
+<script src="assets/site.js?v=24"></script>
+<script>
+(function(){
+  const projects = window.RA_PROJECTS;
+  const gallery = document.getElementById("gallery");
+  const ratios = ["3/4","4/5","4/3","1/1","3/4","4/6","5/4","3/5","4/5","4/3","2/3","5/6","3/4","4/5","1/1","3/4","4/6","5/7","4/5","3/4"];
+  let filter = "all";
+
+  function match(p){
+    if (filter === "all") return true;
+    return (p.type || "").toLowerCase().includes(filter.toLowerCase());
+  }
+
+  function render(){
+    const list = projects.filter(match);
+    document.getElementById("cnt").textContent = list.length;
+    gallery.innerHTML = list.map((p,i) => `
+      <a href="project.html?p=${p.slug}" class="reveal">
+        <div class="img-wrap img-mask" style="aspect-ratio: ${ratios[i % ratios.length]};">
+          <div class="ph ${p.swatch}"></div>
+        </div>
+        <div class="meta">
+          <div>
+            <div class="ttl">${p.title}</div>
+            <div class="sub">${p.location} · ${p.type.split(" / ")[0]}</div>
+          </div>
+          <div class="yr">${p.year}</div>
+        </div>
+      </a>`).join("");
+    if (window.RA) { window.RA.hydratePh(); window.RA.triggerReveals(); }
+    // immediate in-class to avoid blink
+    setTimeout(() => {
+      gallery.querySelectorAll(".reveal, .img-mask").forEach(el => el.classList.add("in"));
+    }, 20);
+  }
+
+  render();
+
+  document.querySelectorAll("#filters button").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll("#filters button").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    filter = b.dataset.f;
+    render();
+  }));
+})();
+</script>
+</body>
+</html>

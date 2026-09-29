@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Press — R.A. Design Studio</title>
+<meta name="description" content="Press features, awards and recognition for R.A. Design Studio."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet"/>
+<link rel="icon" type="image/png" href="assets/logo-ra.png"/>
+<link rel="stylesheet" href="assets/site.css?v=24"/>
+<script src="https://unpkg.com/lenis@1.1.14/dist/lenis.min.js"></script>
+</head>
+<body>
+<script>window.__page = { active: "press" };</script>
+<div id="nav-slot"></div>
+
+<main class="page">
+  <section class="page-head">
+    <div class="container">
+      <h1 class="reveal in"><em>Press</em> &amp; recognition.</h1>
+      <p class="lede reveal in">Selected features, awards and mentions in print and online — from Dezeen to Domus, since 2018.</p>
+    </div>
+  </section>
+
+  <!-- Logo strip -->
+  <section class="section tight" style="padding-top: 60px;">
+    <div class="container">
+      <div class="eyebrow reveal">As featured in</div>
+      <div class="press-logos reveal" id="press-logos"></div>
+    </div>
+  </section>
+
+  <!-- Full list -->
+  <section class="section" style="padding-top: 20px;">
+    <div class="container">
+      <div class="eyebrow reveal">Full archive</div>
+      <h2 class="h-luxe reveal" style="margin-bottom: 50px;">Every piece, in chronological <em>order</em>.</h2>
+      <div class="press-list" id="press-list"></div>
+    </div>
+  </section>
+</main>
+
+<div id="footer-slot"></div>
+<script src="assets/data.js?v=24"></script>
+<script src="assets/partials.js?v=24"></script>
+<script src="assets/site.js?v=24"></script>
+<script>
+(function(){
+  // Logo strip
+  document.getElementById("press-logos").innerHTML = window.RA_PRESS_LOGOS.map(name => `<div class="lg">${name}</div>`).join("");
+
+  // Full list — sorted desc by year
+  const sorted = [...window.RA_PRESS].sort((a,b) => b.year - a.year);
+  document.getElementById("press-list").innerHTML = sorted.map((p,i) => `
+    <div class="row reveal in">
+      <div class="n">${String(i+1).padStart(2,'0')}</div>
+      <div class="pub">
+        <div class="thumb"><div class="ph ${p.thumb || 'stone'}"></div></div>
+        <span>${p.title}</span>
+      </div>
+      <div class="ttl">${p.piece}</div>
+      <div class="yr">${p.year}</div>
+      ${p.url ? `<a class="lk" href="${p.url}" target="_blank" rel="noopener">Read →</a>` : `<div class="lk" style="color:var(--mute); border:0;">—</div>`}
+    </div>`).join("");
+  if (window.RA) window.RA.hydratePh();
+})();
+</script>
+</body>
+</html>
