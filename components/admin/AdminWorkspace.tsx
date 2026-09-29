@@ -197,12 +197,16 @@ export function AdminWorkspace({ initialProjects, initialSettings }: { initialPr
     setMessage("Image uploaded to the asset library");
   }
 
-  async function archiveAsset(id: string) {
-    const response = await fetch(`/api/admin/media/${id}`, { method: "DELETE" });
+  async function archiveAsset(id: string, permanent = false) {
+    // Archiving only hides the asset; it stays in Cloudinary and can be
+    // restored. Deleting also removes it there, freeing storage credits, so it
+    // is confirmed first.
+    if (permanent && !window.confirm("Delete this image permanently? It will be removed from Cloudinary and cannot be recovered.")) return;
+    const response = await fetch(`/api/admin/media/${id}${permanent ? "?permanent=1" : ""}`, { method: "DELETE" });
     if (response.ok) {
       const data = await response.json();
       setMedia(data.media);
-      setMessage("Asset archived from the library");
+      setMessage(permanent ? "Asset deleted permanently" : "Asset archived from the library");
     }
   }
 
@@ -336,7 +340,7 @@ function CareersEditor({ settings, setSettings, save, busy, media }: { settings:
     <section className="admin-card cms-section"><div className="admin-card-head"><div><p className="admin-kicker">Employer message</p><h2>Why work here</h2></div></div><label>Section label<input value={page.whyEyebrow} onChange={(event) => update({ whyEyebrow: event.target.value })} /></label><label>Heading<input value={page.whyTitle} onChange={(event) => update({ whyTitle: event.target.value })} /></label><label>Description<textarea value={page.whyDescription} onChange={(event) => update({ whyDescription: event.target.value })} /></label></section><SaveButton save={save} busy={busy} label="Save careers page" /></div></>;
 }
 
-function MediaLibrary({ media, upload, archive, busy }: { media: MediaAsset[]; upload: (event: FormEvent<HTMLFormElement>) => void; archive: (id: string) => void; busy: boolean }) { return <><PageTitle eyebrow="Content / Media" title="Media library" description="Upload, inspect, and archive the images shared across the public site." /><div className="admin-card upload-card"><div><p className="admin-kicker">Add an asset</p><h2>Upload an image</h2><p>Use this for assets that are not being added to a project yet. Project images can be uploaded directly inside the project editor.</p></div><form onSubmit={upload} className="upload-form"><input name="file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required /><div className="admin-two-col"><input name="alt" placeholder="Alt text" required /><input name="credit" placeholder="Photographer / rights credit" /></div><button disabled={busy}>{busy ? "Uploading…" : "Upload to library"}</button></form></div><div className="media-grid">{media.filter((asset) => !asset.archived).map((asset) => <article className="media-card" key={asset.id}><div className="media-thumb"><img src={asset.src} alt={asset.alt} /></div><div className="media-meta"><strong>{asset.filename}</strong><span>{asset.width} × {asset.height} · {(asset.size / 1024 / 1024).toFixed(1)} MB</span><small>{asset.alt}</small><button onClick={() => archive(asset.id)}>Archive asset</button></div></article>)}</div></>; }
+function MediaLibrary({ media, upload, archive, busy }: { media: MediaAsset[]; upload: (event: FormEvent<HTMLFormElement>) => void; archive: (id: string, permanent?: boolean) => void; busy: boolean }) { return <><PageTitle eyebrow="Content / Media" title="Media library" description="Upload, inspect, and archive the images shared across the public site." /><div className="admin-card upload-card"><div><p className="admin-kicker">Add an asset</p><h2>Upload an image</h2><p>Use this for assets that are not being added to a project yet. Project images can be uploaded directly inside the project editor.</p></div><form onSubmit={upload} className="upload-form"><input name="file" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required /><div className="admin-two-col"><input name="alt" placeholder="Alt text" required /><input name="credit" placeholder="Photographer / rights credit" /></div><button disabled={busy}>{busy ? "Uploading…" : "Upload to library"}</button></form></div><div className="media-grid">{media.filter((asset) => !asset.archived).map((asset) => <article className="media-card" key={asset.id}><div className="media-thumb"><img src={asset.src} alt={asset.alt} /></div><div className="media-meta"><strong>{asset.filename}</strong><span>{asset.width} × {asset.height} · {(asset.size / 1024 / 1024).toFixed(1)} MB</span><small>{asset.alt}</small><div className="media-actions"><button onClick={() => archive(asset.id)}>Archive asset</button><button onClick={() => archive(asset.id, true)}>Delete permanently</button></div></div></article>)}</div></>; }
 
 function Settings({ settings, setSettings, save, busy }: { settings: AdminSettings; setSettings: (settings: AdminSettings) => void; save: () => void; busy: boolean }) {
   const setList = (key: "phones" | "addressLines" | "officeHours", value: string) => setSettings({ ...settings, [key]: value.split("\n").map((line) => line.trim()).filter(Boolean) });
