@@ -1,11 +1,74 @@
+import { cache } from "react";
 import type { AdminProject, ProjectInput } from "@/lib/admin/types";
-import { getDb, json } from "@/lib/admin/db";
-const map = (row: Record<string, unknown>): AdminProject => ({ id:String(row.id),slug:String(row.slug),title:String(row.title),type:row.type as AdminProject["type"],year:Number(row.year),location:String(row.location),area:String(row.area),status:row.status as AdminProject["status"],lede:String(row.lede),body:json<string[]>(String(row.body_json)),materials:json<string[]>(String(row.materials_json)),credits:json<AdminProject["credits"]>(String(row.credits_json)),cover:json<AdminProject["cover"]>(String(row.cover_json)),gallery:json<AdminProject["gallery"]>(String(row.gallery_json)),workflow:row.workflow as AdminProject["workflow"],featured:Boolean(row.featured),seo:json<AdminProject["seo"]>(String(row.seo_json)),updatedAt:String(row.updated_at),publishedAt:row.published_at ? String(row.published_at) : undefined });
-export async function listAdminProjects(){const db=await getDb();return (db.prepare("SELECT * FROM projects ORDER BY featured DESC, title ASC").all() as Record<string,unknown>[]).map(map);}
-/** Public pages may only render projects which an administrator has published. */
-export async function listPublishedProjects(){const db=await getDb();return (db.prepare("SELECT * FROM projects WHERE workflow='published' ORDER BY featured DESC, title ASC").all() as Record<string,unknown>[]).map(map);}
-export async function getAdminProject(id:string){const db=await getDb();const row=db.prepare("SELECT * FROM projects WHERE id = ?").get(id) as Record<string,unknown>|undefined;return row?map(row):undefined;}
-function values(input:ProjectInput){return [input.slug,input.title,input.type,input.year,input.location,input.area,input.status,input.lede,JSON.stringify(input.body),JSON.stringify(input.materials),JSON.stringify(input.credits),JSON.stringify(input.cover),JSON.stringify(input.gallery),input.featured?1:0,JSON.stringify(input.seo)];}
-export async function createAdminProject(input:ProjectInput){const db=await getDb();const id=`local-${crypto.randomUUID()}`;db.prepare("INSERT INTO projects (id,slug,title,type,year,location,area,status,lede,body_json,materials_json,credits_json,cover_json,gallery_json,workflow,featured,seo_json,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(id,...values(input),"draft",new Date().toISOString());return getAdminProject(id);}
-export async function updateAdminProject(id:string,input:ProjectInput,workflow?:AdminProject["workflow"]){const db=await getDb();const current=await getAdminProject(id);if(!current)return undefined;const nextWorkflow=workflow??current.workflow;db.prepare("UPDATE projects SET slug=?,title=?,type=?,year=?,location=?,area=?,status=?,lede=?,body_json=?,materials_json=?,credits_json=?,cover_json=?,gallery_json=?,workflow=?,featured=?,seo_json=?,updated_at=?,published_at=? WHERE id=?").run(...values(input),nextWorkflow,new Date().toISOString(),nextWorkflow==="published"?new Date().toISOString():current.publishedAt??null,id);db.prepare("INSERT INTO audit_log (action,entity,entity_id,created_at) VALUES (?,?,?,?)").run(nextWorkflow==="published"?"publish":"update","project",id,new Date().toISOString());return getAdminProject(id);}
-export async function archiveAdminProject(id:string){const db=await getDb();db.prepare("UPDATE projects SET workflow='archived',updated_at=? WHERE id=?").run(new Date().toISOString(),id);return getAdminProject(id);}
+import { getDb, recordAudit } from "@/lib/admin/mongo";
+
+/** Stored shape: the admin model with its string id under Mongo's `_id`. */
+type ProjectDoc = Omit<AdminProject, "id"> & { _id: string };
+
+const map = ({ _id, ...rest }: ProjectDoc): AdminProject => ({ id: _id, ...rest });
+
+// Featured first, then alphabetical — the ordering the public pages expect.
+const ORDER = { featured: -1, title: 1 } as const;
+
+async function collection() {
+  return (await getDb()).collection<ProjectDoc>("projects");
+}
+
+/** Editable fields only; workflow and timestamps are managed separately. */
+function fields(input: ProjectInput) {
+  return {
+    slug: input.slug, title: input.title, type: input.type, year: input.year,
+    location: input.location, area: input.area, status: input.status, lede: input.lede,
+    body: input.body, materials: input.materials, credits: input.credits,
+    cover: input.cover, gallery: input.gallery, featured: input.featured, seo: input.seo,
+  };
+}
+
+export async function listAdminProjects(): Promise<AdminProject[]> {
+  return (await (await collection()).find().sort(ORDER).toArray()).map(map);
+}
+
+/**
+ * Public pages may only render projects which an administrator has published.
+ * Wrapped in `cache()` so the several calls made while rendering one page
+ * become a single round-trip to Atlas.
+ */
+export const listPublishedProjects = cache(async (): Promise<AdminProject[]> =>
+  (await (await collection()).find({ workflow: "published" }).sort(ORDER).toArray()).map(map));
+
+export async function getAdminProject(id: string): Promise<AdminProject | undefined> {
+  const doc = await (await collection()).findOne({ _id: id });
+  return doc ? map(doc) : undefined;
+}
+
+export async function createAdminProject(input: ProjectInput) {
+  const id = `local-${crypto.randomUUID()}`;
+  await (await collection()).insertOne({
+    _id: id, ...fields(input), workflow: "draft", updatedAt: new Date().toISOString(),
+  });
+  await recordAudit("create", "project", id);
+  return getAdminProject(id);
+}
+
+export async function updateAdminProject(id: string, input: ProjectInput, workflow?: AdminProject["workflow"]) {
+  const current = await getAdminProject(id);
+  if (!current) return undefined;
+  const now = new Date().toISOString();
+  const nextWorkflow = workflow ?? current.workflow;
+  const publishedAt = nextWorkflow === "published" ? now : current.publishedAt;
+  // publishedAt is left absent rather than null while a project has never been
+  // published, so the optional field in AdminProject stays honest.
+  await (await collection()).updateOne({ _id: id }, {
+    $set: { ...fields(input), workflow: nextWorkflow, updatedAt: now, ...(publishedAt ? { publishedAt } : {}) },
+  });
+  await recordAudit(nextWorkflow === "published" ? "publish" : "update", "project", id);
+  return getAdminProject(id);
+}
+
+export async function archiveAdminProject(id: string) {
+  await (await collection()).updateOne({ _id: id }, {
+    $set: { workflow: "archived", updatedAt: new Date().toISOString() },
+  });
+  await recordAudit("archive", "project", id);
+  return getAdminProject(id);
+}

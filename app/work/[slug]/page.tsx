@@ -14,11 +14,6 @@ interface ProjectPageProps {
 
 export const dynamic = "force-dynamic";
 
-/** Pre-render every project at build time. */
-export async function generateStaticParams(): Promise<{ slug: string }[]> {
-  return (await listPublishedProjects()).map((project) => ({ slug: project.slug }));
-}
-
 export async function generateMetadata({ params }: ProjectPageProps): Promise<Metadata> {
   const { slug } = await params;
   const project = (await listPublishedProjects()).find((item) => item.slug === slug);

@@ -1,6 +1,23 @@
-import { getDb } from "@/lib/admin/db";
+import { getDb } from "@/lib/admin/mongo";
+
 export type EnquiryStatus = "new"|"assigned"|"contacted"|"qualified"|"closed"|"spam";
 export interface Enquiry{id:string;name:string;email:string;projectType:string;location:string;message:string;source:string;consentAt:string;status:EnquiryStatus;createdAt:string;}
-const map=(row:Record<string,unknown>):Enquiry=>({id:String(row.id),name:String(row.name),email:String(row.email),projectType:String(row.project_type),location:String(row.location),message:String(row.message),source:String(row.source),consentAt:String(row.consent_at),status:row.status as EnquiryStatus,createdAt:String(row.created_at)});
-export async function createEnquiry(input:Omit<Enquiry,"id"|"createdAt"|"status">){const db=await getDb();const enquiry={...input,id:`enquiry-${crypto.randomUUID()}`,createdAt:new Date().toISOString(),status:"new" as const};db.prepare("INSERT INTO enquiries (id,name,email,project_type,location,message,source,consent_at,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)").run(enquiry.id,enquiry.name,enquiry.email,enquiry.projectType,enquiry.location,enquiry.message,enquiry.source,enquiry.consentAt,enquiry.status,enquiry.createdAt);return enquiry;}
-export async function listEnquiries(){const db=await getDb();return (db.prepare("SELECT * FROM enquiries ORDER BY created_at DESC").all() as Record<string,unknown>[]).map(map);}
+
+type EnquiryDoc = Omit<Enquiry, "id"> & { _id: string };
+
+const map = ({ _id, ...rest }: EnquiryDoc): Enquiry => ({ id: _id, ...rest });
+
+async function collection() {
+  return (await getDb()).collection<EnquiryDoc>("enquiries");
+}
+
+export async function createEnquiry(input: Omit<Enquiry, "id" | "createdAt" | "status">): Promise<Enquiry> {
+  const enquiry: Enquiry = { ...input, id: `enquiry-${crypto.randomUUID()}`, createdAt: new Date().toISOString(), status: "new" };
+  const { id, ...rest } = enquiry;
+  await (await collection()).insertOne({ _id: id, ...rest });
+  return enquiry;
+}
+
+export async function listEnquiries(): Promise<Enquiry[]> {
+  return (await (await collection()).find().sort({ createdAt: -1 }).toArray()).map(map);
+}

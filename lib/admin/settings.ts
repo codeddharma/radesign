@@ -1,6 +1,7 @@
 import type { Img } from "@/lib/media";
 import { HERO_CAROUSEL, PRESS, PRESS_LOGOS, PROCESS_STEPS, SERVICES, TESTIMONIALS } from "@/lib/projects";
-import { getDb, json } from "@/lib/admin/db";
+import { cache } from "react";
+import { getDb } from "@/lib/admin/mongo";
 
 export interface ServiceContent { title: string; description: string }
 export interface ProcessContent { title: string; description: string }
@@ -44,6 +45,9 @@ export interface AdminSettings {
   heroImages: Img[]; footerHeadline: string; homepage: HomepageContent; studioPage: StudioPageContent;
   pressPage: PressPageContent; careersPage: CareersPageContent; contactPage: ContactPageContent;
 }
+
+/** The whole settings blob lives in one document keyed "site". */
+type SettingsDoc = { _id: string; value?: Partial<AdminSettings>; updatedAt?: string };
 
 const defaults: AdminSettings = {
   siteName: "R.A. Design Studio", legalName: "RA Design Studio",
@@ -121,11 +125,16 @@ export function normalizeAdminSettings(value: Partial<AdminSettings> | null | un
   };
 }
 
-export async function getAdminSettings() {
+/**
+ * The whole settings blob is one document (`_id: "site"`), exactly as it was
+ * one SQLite row. `cache()` collapses the several calls made while rendering a
+ * single page — layout and page each ask for it — into one round-trip.
+ */
+export const getAdminSettings = cache(async (): Promise<AdminSettings> => {
   const db = await getDb();
-  const row = db.prepare("SELECT value_json FROM settings WHERE key='site'").get() as { value_json: string } | undefined;
-  return normalizeAdminSettings(row ? json<Partial<AdminSettings>>(row.value_json) : undefined);
-}
+  const doc = await db.collection<SettingsDoc>("settings").findOne({ _id: "site" });
+  return normalizeAdminSettings(doc?.value);
+});
 
 // Strip private location and phone details before public rendering or
 // client-component serialization.
@@ -151,6 +160,10 @@ export async function getPublicSettings() {
 export async function updateAdminSettings(input: Partial<AdminSettings>) {
   const db = await getDb();
   const settings = normalizeAdminSettings({ ...(await getAdminSettings()), ...input });
-  db.prepare("INSERT OR REPLACE INTO settings (key,value_json,updated_at) VALUES (?,?,?)").run("site", JSON.stringify(settings), new Date().toISOString());
+  await db.collection<SettingsDoc>("settings").updateOne(
+    { _id: "site" },
+    { $set: { value: settings, updatedAt: new Date().toISOString() } },
+    { upsert: true },
+  );
   return settings;
 }
