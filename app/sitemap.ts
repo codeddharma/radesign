@@ -5,7 +5,14 @@ import { absoluteUrl } from "@/lib/site";
 /**
  * XML sitemap covering every public route: the static pages plus one entry per
  * project under /work/[slug]. Priorities favour the home and work index.
+ *
+ * Generated per request, like the pages it lists. Prerendering it would freeze
+ * the project list at build time — so a newly published project would be
+ * missing until the next deploy — and would require the database to be
+ * reachable during `next build`.
  */
+export const dynamic = "force-dynamic";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date();
 
