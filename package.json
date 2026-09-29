@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "admin:hash": "node scripts/hash-password.mjs",
+    "migrate:cloud": "node --env-file=.env.local scripts/migrate-to-cloud.mjs"
   },
   "dependencies": {
     "cloudinary": "^2.11.0",
