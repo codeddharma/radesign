@@ -22,8 +22,13 @@
 
 set -euo pipefail
 
+# Default to the checkout this script lives in, so it works from wherever the
+# source actually sits. On the server that is /srv/radesign/scripts/deploy.sh,
+# which resolves to /srv/radesign without hardcoding it; on a laptop it resolves
+# to the working copy. Override APP_DIR to deploy somewhere else.
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="${APP_NAME:-radesign}"
-APP_DIR="${APP_DIR:-/srv/radesign}"
+APP_DIR="${APP_DIR:-$(dirname "$SCRIPT_DIR")}"
 ENV_FILE="${ENV_FILE:-$APP_DIR/.env.local}"
 ECOSYSTEM="${ECOSYSTEM:-$APP_DIR/ecosystem.config.cjs}"
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:3000/}"

@@ -25,7 +25,9 @@ module.exports = {
       script: "node_modules/next/dist/bin/next",
       interpreter: "node",
       args: "start -H 127.0.0.1 -p 3535",
-      cwd: process.env.APP_DIR || "/srv/radesign",
+      // This file sits in the application root, so __dirname is that root. It
+      // therefore follows the checkout instead of assuming /srv/radesign.
+      cwd: process.env.APP_DIR || __dirname,
 
       // One fork on a 1 vCPU box. Next reads .env.local itself from cwd, which
       // is why no secrets appear in this file. To scale on a larger instance,
