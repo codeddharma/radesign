@@ -31,12 +31,30 @@ APP_NAME="${APP_NAME:-radesign}"
 APP_DIR="${APP_DIR:-$(dirname "$SCRIPT_DIR")}"
 ENV_FILE="${ENV_FILE:-$APP_DIR/.env.local}"
 ECOSYSTEM="${ECOSYSTEM:-$APP_DIR/ecosystem.config.cjs}"
-HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:3000/}"
+# Must match the -p flag in ecosystem.config.cjs.
+PORT="${PORT:-3000}"
+HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:$PORT/}"
 HEALTH_RETRIES="${HEALTH_RETRIES:-30}"
 PULL=0
 [ "${1:-}" = "--pull" ] && PULL=1
 
 note() { echo "[$(date -u +%FT%TZ)] $*"; }
+# Prints what is listening on $PORT, or returns 1 if nothing is. ss is present
+# on modern Linux, lsof is the fallback, and neither is guaranteed -- a missing
+# tool must not be read as "port is free", so say so and let the caller decide.
+find_port_holder() {
+  if command -v ss >/dev/null; then
+    ss -ltnpH "sport = :$PORT" 2>/dev/null | grep -q . || return 1
+    ss -ltnpH "sport = :$PORT" 2>/dev/null | awk '{print $NF}' | head -1
+  elif command -v lsof >/dev/null; then
+    local pid
+    pid="$(lsof -ti:"$PORT" -sTCP:LISTEN 2>/dev/null | head -1)" || return 1
+    [ -n "$pid" ] || return 1
+    echo "pid $pid ($(ps -o comm= -p "$pid" 2>/dev/null || echo unknown))"
+  else
+    return 1
+  fi
+}
 die()  { note "FAILED: $*"; logger -t radesign-deploy "FAILED: $*" 2>/dev/null || true; exit 1; }
 
 # --- preflight -------------------------------------------------------------
@@ -78,6 +96,24 @@ done
 # with EADDRINUSE, usually long after the deploy appeared to succeed.
 if command -v systemctl >/dev/null && systemctl is-active --quiet "$APP_NAME" 2>/dev/null; then
   die "the $APP_NAME systemd unit is active. Pick one process manager: sudo systemctl disable --now $APP_NAME"
+fi
+
+# Whether PM2 already runs this app decides start vs reload later. Resolving it
+# now means a port clash is caught before the build rather than after it.
+if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
+  APP_KNOWN=1
+else
+  APP_KNOWN=0
+  # About to start a new server, so nothing else may hold the port. The common
+  # case is a panel running PM2 under its own process name -- aaPanel's "Node
+  # Project" manager does this -- so the clash never shows in `pm2 list` under
+  # our name.
+  if port_holder="$(find_port_holder)"; then
+    die "port $PORT is already in use by: $port_holder
+       Something is already serving this app. Either stop it, or let it keep
+       running and deploy through whatever started it. Running two servers on
+       one port is not survivable."
+  fi
 fi
 
 if [ "$(id -u)" = "0" ]; then
@@ -151,7 +187,7 @@ trap - EXIT
 
 # --- start or reload -------------------------------------------------------
 
-if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
+if [ "$APP_KNOWN" = "1" ]; then
   note "reloading $APP_NAME"
   pm2 reload "$ECOSYSTEM" --update-env || die "pm2 reload failed"
 else

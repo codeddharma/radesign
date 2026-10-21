@@ -192,6 +192,52 @@ pins `NEXT_DIST_DIR` back to empty — PM2 inherits the invoking shell's
 environment, and a stray `NEXT_DIST_DIR` from a dev preview would otherwise make
 production serve the wrong build directory.
 
+#### On aaPanel
+
+aaPanel's **Node Project** manager runs PM2 itself, under its own process name.
+Two ways to run this site there, and mixing them is the thing to avoid:
+
+- **Let aaPanel manage it.** Point the Node project at the folder, set the start
+  command to `npm run start`, and deploy by rebuilding then restarting from the
+  panel. `scripts/deploy.sh` is not used.
+- **Manage it yourself.** Stop/delete the aaPanel Node project for this site and
+  run `./scripts/deploy.sh`.
+
+The script refuses to start a second server when something already holds port
+3000, naming the process, so the clash fails in seconds rather than becoming an
+intermittently broken site. It cannot see an aaPanel project by name, though —
+only the occupied port — so if you pick the panel, deploy through the panel.
+
+Paths differ from the rest of this guide: aaPanel sites live under
+`/www/wwwroot/<folder>`, and its Node builds sit in `/www/server/nodejs/vNN/bin`
+rather than `/usr/bin`. Nothing needs editing for that — the script and
+`ecosystem.config.cjs` both resolve the application directory from their own
+location — but `node`, `npm` and `pm2` must be on `PATH` for the shell running
+the deploy. If `pm2 not found` appears while the panel clearly has Node:
+
+```bash
+export PATH="/www/server/nodejs/v22.11.0/bin:$PATH"   # adjust the version
+npm install -g pm2
+```
+
+aaPanel fronts sites with **Nginx**, not a Cloudflare tunnel, so section 7's
+tunnel is optional. Set the site up as a reverse proxy to `http://127.0.0.1:3000`
+and keep the app bound to `127.0.0.1` so it is never reachable directly. In the
+proxy configuration, forward the client's protocol — Next builds absolute URLs
+for canonical tags, the sitemap and OpenGraph from it, and without it they are
+emitted as `http://`:
+
+```nginx
+proxy_set_header Host              $host;
+proxy_set_header X-Real-IP         $remote_addr;
+proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_http_version 1.1;
+```
+
+Do not let Nginx serve the folder as static files. `/admin` and `/api/*` must
+reach Node, and nothing may cache them.
+
 ### Option B — systemd
 
 `/etc/systemd/system/radesign.service`:
