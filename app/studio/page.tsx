@@ -7,7 +7,7 @@ import styles from "./studio.module.css";
 
 export const dynamic = "force-dynamic";
 const SHOW_TEAM_PHOTOS = false;
-const FOUNDERS_PHOTO = { src: "/media/studio/radhika-arpit-dutt-bw.jpg", alt: "Radhika Dutt and Arpit Dutt, founding partners of R.A. Design Studio" };
+const FOUNDERS_PHOTO = { src: "https://res.cloudinary.com/gyhtf2lv/image/upload/v1792608678/radesign/studio/radhika-arpit-dutt-bw.jpg", alt: "Radhika Dutt and Arpit Dutt, founding partners of R.A. Design Studio" };
 
 export async function generateMetadata(): Promise<Metadata> {
   const { studioPage } = await getAdminSettings();

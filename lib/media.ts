@@ -1,5 +1,8 @@
-// AUTO-GENERATED from public/media (do not edit by hand).
-// Regenerate by re-running the media import step.
+// Seed data only. Images live in Cloudinary and the live catalog lives in
+// MongoDB; these arrays are no longer generated from public/media, which was
+// removed once the migration landed. HERO_CAROUSEL is the one array still read
+// at runtime — lib/admin/settings.ts uses it as the heroImages default when the
+// settings document has none — so its URLs must stay resolvable.
 
 export interface Img {
   src: string;
@@ -127,15 +130,15 @@ export const PROJECT_MEDIA: Img[][] = [
  * project galleries (the original /carousel folder was too low-res for a
  * full-screen hero). */
 export const HERO_CAROUSEL: Img[] = [
-  { src: "/media/projects/1/01.jpg", w: 2200, h: 1609 },
-  { src: "/media/projects/9/01.jpg", w: 2200, h: 1650 },
-  { src: "/media/projects/2/01.jpg", w: 2200, h: 1466 },
-  { src: "/media/projects/6/01.jpg", w: 2200, h: 1466 },
-  { src: "/media/projects/3/01.jpg", w: 2200, h: 1465 },
-  { src: "/media/projects/7/01.jpg", w: 2200, h: 1466 },
-  { src: "/media/projects/4/01.jpg", w: 2200, h: 1466 },
-  { src: "/media/projects/8/01.jpg", w: 2200, h: 1466 },
-  { src: "/media/projects/5/02.jpg", w: 2200, h: 1442 },
+  { src: "https://res.cloudinary.com/gyhtf2lv/image/upload/v1792608889/radesign/projects/1/01.jpg", w: 2200, h: 1609 },
+  { src: "https://res.cloudinary.com/gyhtf2lv/image/upload/v1792608684/radesign/projects/9/01.jpg", w: 2200, h: 1650 },
+  { src: "https://res.cloudinary.com/gyhtf2lv/image/upload/v1792608838/radesign/projects/2/01.jpg", w: 2200, h: 1466 },
+  { src: "https://res.cloudinary.com/gyhtf2lv/image/upload/v1792608747/radesign/projects/6/01.jpg", w: 2200, h: 1466 },
+  { src: "https://res.cloudinary.com/gyhtf2lv/image/upload/v1792608812/radesign/projects/3/01.jpg", w: 2200, h: 1465 },
+  { src: "https://res.cloudinary.com/gyhtf2lv/image/upload/v1792608726/radesign/projects/7/01.jpg", w: 2200, h: 1466 },
+  { src: "https://res.cloudinary.com/gyhtf2lv/image/upload/v1792608792/radesign/projects/4/01.jpg", w: 2200, h: 1466 },
+  { src: "https://res.cloudinary.com/gyhtf2lv/image/upload/v1792608706/radesign/projects/8/01.jpg", w: 2200, h: 1466 },
+  { src: "https://res.cloudinary.com/gyhtf2lv/image/upload/v1792608776/radesign/projects/5/02.jpg", w: 2200, h: 1442 },
 ];
 
 /** Standalone cover photos (home montage / spare). */
