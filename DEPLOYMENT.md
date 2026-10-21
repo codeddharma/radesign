@@ -102,8 +102,11 @@ To set or change the admin password:
 
 ```bash
 npm run admin:hash            # prompts, prints the ADMIN_PASSWORD_HASH line
-sudo systemctl restart radesign
+pm2 reload radesign           # or: sudo systemctl restart radesign
 ```
+
+The restart is what makes the new hash take effect — `.env.local` is read at
+start-up, not per request.
 
 `NEXT_DIST_DIR` exists only for running a preview beside a live build. **Leave
 it unset in production.**
@@ -138,7 +141,58 @@ a NAS). It is no longer needed by the application.
 
 ---
 
-## 6. Run as a service (systemd)
+## 6. Run as a service
+
+Pick **one** process manager. PM2 and the systemd unit below both bind
+`127.0.0.1:3000`, so whichever starts second dies with `EADDRINUSE` — usually
+noticed only once the site is already down. `scripts/deploy.sh` refuses to run
+while the systemd unit is active, but nothing stops you starting them the other
+way round.
+
+Either way the app binds to `127.0.0.1` only and is never exposed directly;
+Cloudflare's tunnel (section 7) is what reaches it.
+
+### Option A — PM2 (scripted)
+
+`ecosystem.config.cjs` defines the process and `scripts/deploy.sh` performs the
+whole deploy: preflight checks, dependency install, build, image-cache
+preservation, reload and a health check.
+
+```bash
+npm install -g pm2
+pm2 install pm2-logrotate        # PM2 log files grow without bound otherwise
+
+cd /srv/radesign
+./scripts/deploy.sh              # builds and starts
+
+pm2 startup                      # prints a command — run it, then:
+pm2 save                         # so the app returns after a reboot
+```
+
+Day to day:
+
+```bash
+pm2 status
+pm2 logs radesign
+pm2 reload radesign              # after a manual rebuild
+```
+
+The script stops before touching the running app if anything is wrong —
+`.env.local` missing, left group-readable, or any required variable empty; Node
+older than 22; pm2 absent; the systemd unit still active. A failed build also
+leaves the running app alone.
+
+> `pm2 startup` run as root installs a **root-level** boot hook and PM2 will own
+> the app as root. Run the deploy as the `radesign` user instead, matching
+> `User=radesign` in the systemd unit.
+
+Secrets are never passed through PM2. Next loads `.env.local` itself from the
+working directory, which is why `ecosystem.config.cjs` sets only `NODE_ENV` and
+pins `NEXT_DIST_DIR` back to empty — PM2 inherits the invoking shell's
+environment, and a stray `NEXT_DIST_DIR` from a dev preview would otherwise make
+production serve the wrong build directory.
+
+### Option B — systemd
 
 `/etc/systemd/system/radesign.service`:
 
@@ -165,8 +219,6 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now radesign
 journalctl -u radesign -f
 ```
-
-The app binds to `127.0.0.1` only and is never exposed directly.
 
 ---
 
@@ -253,17 +305,30 @@ NAS) as the master copy.
    to `public/media/uploads/`, where Next would not serve them until the next
    rebuild. That defect is gone.)
 
-3. **Preserve the image cache across deploys.** `npm run build` wipes
-   `.next/cache`, which forces Next to re-fetch every source image from
-   Cloudinary — roughly 600 MB of the monthly bandwidth allowance. Keep it:
+3. **Preserve the image cache across deploys.** `.next/cache/images` holds the
+   optimised copies. Lose it and Next re-fetches every source image from
+   Cloudinary on first render — roughly 600 MB of the monthly allowance, and
+   exhausting that makes Cloudinary **stop delivering** until the cycle resets.
+
+   `scripts/deploy.sh` stashes and restores it around the build, including when
+   the build fails. Building in place does keep `.next/cache`, so this matters
+   mainly when the source is replaced wholesale — a fresh clone, or an rsync
+   over the top — which is exactly when the loss would go unnoticed.
+
+   Doing it by hand instead:
 
    ```bash
    cd /srv/radesign
-   cp -r .next/cache/images /tmp/next-image-cache 2>/dev/null || true
+   STASH=$(mktemp -d)
+   cp -r .next/cache/images "$STASH/images" 2>/dev/null || true
    npm ci && npm run build
-   mkdir -p .next/cache && cp -r /tmp/next-image-cache .next/cache/images 2>/dev/null || true
-   sudo systemctl restart radesign
+   mkdir -p .next/cache/images && cp -R "$STASH/images/." .next/cache/images/ 2>/dev/null || true
+   rm -rf "$STASH"
+   pm2 reload radesign           # or: sudo systemctl restart radesign
    ```
+
+   Note the `/.` suffix: `cp -r src dest` nests `src` *inside* `dest` when
+   `dest` already exists, quietly producing `.next/cache/images/images`.
 
 4. **Resize before uploading.** Cloudinary caps ingest at 2560 px on the long
    edge, but uploading 40 MB camera originals still wastes time and bandwidth.
@@ -284,15 +349,20 @@ NAS) as the master copy.
 
 ## 10. Updating the site later
 
+With PM2, the whole update is the deploy script:
+
 ```bash
 cd /srv/radesign
-# copy in the new source, keeping .env.local
-cp -r .next/cache/images /tmp/next-image-cache 2>/dev/null || true
-npm ci
-npm run build
-mkdir -p .next/cache && cp -r /tmp/next-image-cache .next/cache/images 2>/dev/null || true
-sudo systemctl restart radesign
+./scripts/deploy.sh --pull     # git pull, build, reload, health check
 ```
+
+`--pull` fast-forwards the checkout first and refuses to run if the working tree
+has uncommitted changes, so an edit made directly on the server is never
+silently overwritten. Omit it to build whatever source is already on disk
+(useful when deploying by rsync or scp).
+
+On systemd, do the same steps by hand — see section 9 note 3 for the build,
+then `sudo systemctl restart radesign`.
 
 Content is untouched by a redeploy — it lives in Atlas and Cloudinary.
 
@@ -305,7 +375,10 @@ Content is untouched by a redeploy — it lives in Atlas and Cloudinary.
 - [ ] Cloudinary account created, credentials in `.env.local`
 - [ ] `.env.local` filled in and `chmod 600`; fresh `ADMIN_PASSWORD_HASH` and `ADMIN_SESSION_SECRET`
 - [ ] Migration dry run clean, then run for real; content visible in Atlas
-- [ ] systemd service running; `curl -I http://127.0.0.1:3000` returns 200
+- [ ] One process manager chosen (PM2 **or** systemd, not both) and running
+- [ ] If PM2: `pm2 startup` + `pm2 save` done, and `pm2-logrotate` installed
+- [ ] `curl -I http://127.0.0.1:3000` returns 200
+- [ ] Reboot tested — the site comes back by itself
 - [ ] Cloudflare tunnel points at the new server; old origin stopped
 - [ ] `https://www.radesign.info` loads; apex redirects to `www`
 - [ ] `/work`, `/studio`, `/contact`, `/press` load; `/careers` redirects to `/contact`
