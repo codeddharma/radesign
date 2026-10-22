@@ -107,6 +107,13 @@
 .project-existing button, .project-image-card-meta button { padding: 9px 10px; border: 1px solid var(--admin-ink); background: white; color: var(--admin-ink); cursor: pointer; font-size: 10px; }
 .project-existing button:hover, .project-image-card-meta button:hover { border-color: var(--admin-accent); color: var(--admin-accent); }
 .project-existing button:disabled, .project-image-card-meta button:disabled { cursor: default; opacity: 0.45; }
+
+/* Alt text and credit on an already-attached image. Publishing requires both
+   on the cover, so they have to be editable after upload, not only during. */
+.project-image-field { display: flex; flex-direction: column; gap: 3px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--admin-muted); }
+.project-image-field input { padding: 6px 8px; border: 1px solid #cfd0ca; font-size: 11px; text-transform: none; letter-spacing: 0; color: var(--admin-ink); background: white; }
+.project-image-field input:focus { outline: none; border-color: var(--admin-accent); }
+.project-image-warn { color: var(--admin-accent); text-transform: none; letter-spacing: 0; line-height: 1.35; }
 .project-image-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
 .project-image-card { overflow: hidden; border: 1px solid var(--admin-line); background: white; }
 .project-image-preview { position: relative; aspect-ratio: 1.3; background: var(--admin-soft); }

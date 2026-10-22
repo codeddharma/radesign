@@ -21,11 +21,54 @@ export async function archiveMedia(id: string) {
   return listMedia();
 }
 
-/** Hard delete: removes the asset from Cloudinary too, freeing storage credits. */
+/** Raised when a permanent delete would leave a page pointing at nothing. */
+export class MediaInUseError extends Error {
+  constructor(readonly usedBy: string[]) {
+    super(`Image is still used by: ${usedBy.join(", ")}`);
+    this.name = "MediaInUseError";
+  }
+}
+
+/**
+ * Everywhere an image is referenced. Nothing cascades a media delete into
+ * content, so without this check a permanent delete removes the asset from
+ * Cloudinary and leaves project galleries and hero slides pointing at a dead
+ * URL — broken images on the live site, with no error anywhere.
+ */
+export async function findMediaUsage(src: string): Promise<string[]> {
+  const db = await getDb();
+  const usedBy: string[] = [];
+
+  const projects = await db.collection<{ title: string }>("projects")
+    .find({ $or: [{ "cover.src": src }, { "gallery.src": src }] })
+    .toArray();
+  for (const project of projects) usedBy.push(`project “${project.title}”`);
+
+  // Settings nest images under several optional shapes (hero slides, founder
+  // and team portraits, the careers hero). Scanning the stored document for
+  // the URL catches all of them and keeps working if another is added later.
+  // Typed _id: the driver assumes ObjectId otherwise, and this collection
+  // keys on the string "site".
+  const settings = await db.collection<{ _id: string }>("settings").findOne({ _id: "site" });
+  if (settings && JSON.stringify(settings).includes(src)) usedBy.push("site settings (homepage, studio or careers)");
+
+  return usedBy;
+}
+
+/**
+ * Hard delete: removes the asset from Cloudinary too, freeing storage credits.
+ * Refuses while the image is still referenced — archiving is the safe way to
+ * retire an image that is in use, since the Cloudinary URL keeps resolving.
+ */
 export async function deleteMedia(id: string) {
   const col = await collection();
   const doc = await col.findOne({ _id: id });
-  if (doc?.publicId) await destroyImage(doc.publicId);
+  if (!doc) return listMedia();
+
+  const usedBy = await findMediaUsage(doc.src);
+  if (usedBy.length) throw new MediaInUseError(usedBy);
+
+  if (doc.publicId) await destroyImage(doc.publicId);
   await col.deleteOne({ _id: id });
   return listMedia();
 }
