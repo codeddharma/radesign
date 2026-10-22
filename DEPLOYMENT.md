@@ -355,6 +355,32 @@ NAS) as the master copy.
 
 ---
 
+## 8b. Health endpoint
+
+`GET /api/health` is unauthenticated and uncached:
+
+```bash
+curl -i http://127.0.0.1:3535/api/health
+# {"status":"ok","database":"up","ms":31}          HTTP 200
+# {"status":"error","database":"down","ms":2014}   HTTP 503
+```
+
+It pings MongoDB rather than simply returning `ok`, because the failure worth
+catching is Node being healthy while Atlas is unreachable — a static response
+would report success while every page returned a 500. A 503 here almost always
+means **this server's public IP is not in the Atlas allowlist**; the IP changes
+if the instance is rebuilt or its address is not reserved.
+
+The body is deliberately bare. The driver's own error names the cluster host and
+user, so that detail goes to the process log (`pm2 logs radesign`) and never to
+an anonymous caller.
+
+`scripts/deploy.sh` waits on this endpoint, then fetches `/` once — the probe
+proves the database answers, the page proves rendering works. Point an uptime
+monitor or the panel's health check at it too.
+
+---
+
 ## 9. Operating notes and limits
 
 1. **Content edits are live immediately.** Pages are server-rendered per request

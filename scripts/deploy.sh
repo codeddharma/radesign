@@ -36,7 +36,11 @@ ECOSYSTEM="${ECOSYSTEM:-$APP_DIR/ecosystem.config.cjs}"
 # because 3000 is usually already taken on a shared box.
 PORT="${PORT:-3535}"
 export PORT
-HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:$PORT/}"
+HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:$PORT/api/health}"
+# Probed once after the health check passes. /api/health proves Node is up and
+# Atlas answers; it does not prove a page renders, so one real page is fetched
+# too rather than trusting the probe alone.
+RENDER_URL="${RENDER_URL:-http://127.0.0.1:$PORT/}"
 HEALTH_RETRIES="${HEALTH_RETRIES:-30}"
 PULL=0
 [ "${1:-}" = "--pull" ] && PULL=1
@@ -211,9 +215,17 @@ for i in $(seq 1 "$HEALTH_RETRIES"); do
   CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$HEALTH_URL" || true)"
   if [ "$CODE" = "200" ]; then
     note "health check OK (HTTP 200 after ${i}s)"
+    RENDER_CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$RENDER_URL" || true)"
+    [ "$RENDER_CODE" = "200" ] || die "health check passed but $RENDER_URL returned ${RENDER_CODE:-none}"
+    note "page render OK"
     note "deploy complete"
     logger -t radesign-deploy "deploy complete: $(git rev-parse --short HEAD 2>/dev/null || echo untracked)" 2>/dev/null || true
     exit 0
+  fi
+  # 503 means Node is serving but Atlas is not answering -- almost always the
+  # server public IP missing from the Atlas allowlist.
+  if [ "$CODE" = "503" ] && [ "$i" = "5" ]; then
+    note "  still 503: check the Atlas IP allowlist for this server"
   fi
   sleep 1
 done
