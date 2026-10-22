@@ -248,6 +248,16 @@ proxy_http_version 1.1;
 Do not let Nginx serve the folder as static files. `/admin` and `/api/*` must
 reach Node, and nothing may cache them.
 
+`X-Forwarded-Proto` is not optional. Next takes the scheme of its redirects
+from it, so without it `/admin` redirects a signed-out visitor to
+**`http://`** — an extra hop at best, and a redirect loop if the proxy forces
+HTTPS. The host half is handled in `middleware.ts`, which only honours a
+forwarded host matching the canonical domain in `lib/site.ts` or a local
+address, falling back to `SITE_URL` otherwise; an unchecked header there would
+let a caller point the login page at their own domain. Serving this site on a
+different domain means changing `SITE_URL`, or that redirect lands on
+radesign.info.
+
 ### Option B — systemd
 
 `/etc/systemd/system/radesign.service`:
