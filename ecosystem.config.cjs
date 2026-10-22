@@ -11,10 +11,15 @@
  * `.cjs` because the package is not an ES module and PM2 requires CommonJS here.
  *
  * Pick ONE process manager. The systemd unit in DEPLOYMENT.md section 6 and
- * this file both bind 127.0.0.1:3000, so whichever starts second dies with
+ * this file both bind the same port, so whichever starts second dies with
  * EADDRINUSE. Disable the unit before using PM2:
  *   sudo systemctl disable --now radesign
  */
+// Default 3535 rather than Next's 3000, which is commonly already taken on a
+// shared box. scripts/deploy.sh exports PORT before invoking pm2, so the port
+// the app binds and the port the deploy health-checks cannot drift apart.
+const PORT = process.env.PORT || "3535";
+
 module.exports = {
   apps: [
     {
@@ -24,7 +29,7 @@ module.exports = {
       // stops would not drain connections cleanly.
       script: "node_modules/next/dist/bin/next",
       interpreter: "node",
-      args: "start -H 127.0.0.1 -p 3535",
+      args: `start -H 127.0.0.1 -p ${PORT}`,
       // This file sits in the application root, so __dirname is that root. It
       // therefore follows the checkout instead of assuming /srv/radesign.
       cwd: process.env.APP_DIR || __dirname,
@@ -37,6 +42,9 @@ module.exports = {
 
       env: {
         NODE_ENV: "production",
+        // Next honours PORT too; keeping it equal to the -p flag means the two
+        // cannot disagree.
+        PORT,
         // next.config.mjs reads `process.env.NEXT_DIST_DIR || ".next"`. PM2
         // inherits the invoking shell's environment, so an exported
         // NEXT_DIST_DIR left over from a dev preview would otherwise make

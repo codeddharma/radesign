@@ -77,8 +77,8 @@ chmod 600 .env.local
 
 npm ci
 npm run build
-npm run start -- -H 127.0.0.1 -p 3000
-curl -I http://127.0.0.1:3000/     # expect HTTP 200
+npm run start -- -H 127.0.0.1 -p 3535
+curl -I http://127.0.0.1:3535/     # expect HTTP 200
 ```
 
 `npm run build` does **not** need the database or Cloudinary to be reachable.
@@ -110,6 +110,16 @@ start-up, not per request.
 
 `NEXT_DIST_DIR` exists only for running a preview beside a live build. **Leave
 it unset in production.**
+
+`PORT` sets the port the app binds; it defaults to **3535**, not Next's 3000,
+which is often already taken. `scripts/deploy.sh` and `ecosystem.config.cjs`
+read the same variable, so set it in one place only:
+
+```bash
+PORT=4000 ./scripts/deploy.sh
+```
+
+Change it and the reverse proxy must be repointed to match.
 
 Never commit `.env.local`, and never include it in a handover archive.
 
@@ -144,7 +154,7 @@ a NAS). It is no longer needed by the application.
 ## 6. Run as a service
 
 Pick **one** process manager. PM2 and the systemd unit below both bind
-`127.0.0.1:3000`, so whichever starts second dies with `EADDRINUSE` — usually
+`127.0.0.1:3535`, so whichever starts second dies with `EADDRINUSE` — usually
 noticed only once the site is already down. `scripts/deploy.sh` refuses to run
 while the systemd unit is active, but nothing stops you starting them the other
 way round.
@@ -204,7 +214,7 @@ Two ways to run this site there, and mixing them is the thing to avoid:
   run `./scripts/deploy.sh`.
 
 The script refuses to start a second server when something already holds port
-3000, naming the process, so the clash fails in seconds rather than becoming an
+3535, naming the process, so the clash fails in seconds rather than becoming an
 intermittently broken site. It cannot see an aaPanel project by name, though —
 only the occupied port — so if you pick the panel, deploy through the panel.
 
@@ -221,7 +231,7 @@ npm install -g pm2
 ```
 
 aaPanel fronts sites with **Nginx**, not a Cloudflare tunnel, so section 7's
-tunnel is optional. Set the site up as a reverse proxy to `http://127.0.0.1:3000`
+tunnel is optional. Set the site up as a reverse proxy to `http://127.0.0.1:3535`
 and keep the app bound to `127.0.0.1` so it is never reachable directly. In the
 proxy configuration, forward the client's protocol — Next builds absolute URLs
 for canonical tags, the sitemap and OpenGraph from it, and without it they are
@@ -252,7 +262,7 @@ Type=simple
 User=radesign
 WorkingDirectory=/srv/radesign
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/node /srv/radesign/node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3000
+ExecStart=/usr/bin/node /srv/radesign/node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3535
 Restart=always
 RestartSec=5
 
@@ -281,7 +291,7 @@ needs no inbound port at all and sidesteps both.
 2. In **Cloudflare Zero Trust → Networks → Tunnels**, create a tunnel (or reuse
    the existing one) and run its install command on this server.
 3. Point the public hostnames for `radesign.info` and `www.radesign.info` at
-   **`http://127.0.0.1:3000`**. The apex redirects to `www`; keep that.
+   **`http://127.0.0.1:3535`**. The apex redirects to `www`; keep that.
 4. Once the new server responds, stop any tunnel running on the old host so only
    one origin serves the site.
 
@@ -428,7 +438,7 @@ Content is untouched by a redeploy — it lives in Atlas and Cloudinary.
 - [ ] Migration dry run clean, then run for real; content visible in Atlas
 - [ ] One process manager chosen (PM2 **or** systemd, not both) and running
 - [ ] If PM2: `pm2 startup` + `pm2 save` done, and `pm2-logrotate` installed
-- [ ] `curl -I http://127.0.0.1:3000` returns 200
+- [ ] `curl -I http://127.0.0.1:3535` returns 200
 - [ ] Reboot tested — the site comes back by itself
 - [ ] Cloudflare tunnel points at the new server; old origin stopped
 - [ ] `https://www.radesign.info` loads; apex redirects to `www`

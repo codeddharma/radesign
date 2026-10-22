@@ -31,8 +31,11 @@ APP_NAME="${APP_NAME:-radesign}"
 APP_DIR="${APP_DIR:-$(dirname "$SCRIPT_DIR")}"
 ENV_FILE="${ENV_FILE:-$APP_DIR/.env.local}"
 ECOSYSTEM="${ECOSYSTEM:-$APP_DIR/ecosystem.config.cjs}"
-# Must match the -p flag in ecosystem.config.cjs.
-PORT="${PORT:-3000}"
+# ecosystem.config.cjs reads this same variable, so exporting it keeps the port
+# the app binds and the port the health check probes in step. Default 3535
+# because 3000 is usually already taken on a shared box.
+PORT="${PORT:-3535}"
+export PORT
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:$PORT/}"
 HEALTH_RETRIES="${HEALTH_RETRIES:-30}"
 PULL=0
@@ -92,7 +95,7 @@ for key in ADMIN_EMAIL ADMIN_PASSWORD_HASH ADMIN_SESSION_SECRET \
   [ -n "$value" ] || die "$key is empty in $ENV_FILE"
 done
 
-# Two process managers both binding 127.0.0.1:3000 means the second one dies
+# Two process managers both binding 127.0.0.1:$PORT means the second one dies
 # with EADDRINUSE, usually long after the deploy appeared to succeed.
 if command -v systemctl >/dev/null && systemctl is-active --quiet "$APP_NAME" 2>/dev/null; then
   die "the $APP_NAME systemd unit is active. Pick one process manager: sudo systemctl disable --now $APP_NAME"
