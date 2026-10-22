@@ -17,7 +17,11 @@
 
 set -euo pipefail
 
-APP_DIR="${APP_DIR:-/srv/radesign}"
+# Resolve the checkout from this script's own location rather than assuming
+# /srv/radesign, so the backup keeps working wherever the site is installed
+# (aaPanel puts sites under /www/wwwroot/<folder>). APP_DIR still overrides.
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+APP_DIR="${APP_DIR:-$(dirname "$SCRIPT_DIR")}"
 ENV_FILE="${ENV_FILE:-$APP_DIR/.env.local}"
 REMOTE="${BACKUP_REMOTE:-gdrive:radesign-backups}"
 KEEP="${BACKUP_KEEP:-5}"

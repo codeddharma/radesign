@@ -308,14 +308,19 @@ One-time setup:
 
 ```bash
 rclone config          # create a Google Drive remote named "gdrive"
-chmod +x /srv/radesign/scripts/backup-mongo.sh
-/srv/radesign/scripts/backup-mongo.sh      # run once by hand and confirm it works
+chmod +x scripts/backup-mongo.sh
+./scripts/backup-mongo.sh      # run once by hand and confirm it works
 ```
+
+The script finds `.env.local` relative to its own location, so it needs no
+editing when the site is not at `/srv/radesign`. Use the real path in the cron
+line below — cron has no working directory of its own.
 
 Schedule it (`sudo crontab -e`) — the 1st and 16th, about every 15 days:
 
 ```cron
 0 3 1,16 * * /srv/radesign/scripts/backup-mongo.sh >> /var/log/radesign-backup.log 2>&1
+# aaPanel: /www/wwwroot/radesign/scripts/backup-mongo.sh
 ```
 
 It keeps the newest **5** archives (about 75 days of history) and deletes older
